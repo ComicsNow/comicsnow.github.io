@@ -203,17 +203,6 @@ body {
   border-color: var(--gold);
 }
 
-/* Draft Banner */
-.draft-banner {
-  background: linear-gradient(90deg, rgba(0, 85, 255, 0.22), rgba(251, 77, 61, 0.22));
-  border-block-end: 1px solid rgba(255, 206, 58, 0.35);
-  padding: 0.45rem 1rem;
-  text-align: center;
-  font-family: var(--font-mono);
-  font-size: 0.76rem;
-  color: var(--gold);
-}
-
 /* Hero Section */
 .hero {
   padding-block: 4.5rem 3.5rem;
