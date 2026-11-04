@@ -110,7 +110,7 @@ npm install -g comics-now`
       'reading-list-dag':
         '🔀 <strong>Visual Crossover Reading Order Map:</strong> Drag to pan, scroll to zoom, and click any issue node across MLJ Magazines, Rural Home, and Dell Publishing to inspect or read it!',
       'gve-editor':
-        '✏️ <strong>GVE Now! Visual Editor (Live Sync):</strong> Drag or resize any panel (blue) or speech bubble (gold), draw new polygon boxes, reorder reading steps, and click <strong>Save</strong>—your changes sync immediately into the Comics Now! Reader!'
+        '✏️ <strong>GVE Now! Visual Editor (Live Sync &amp; Share):</strong> Drag or resize any panel (blue) or speech bubble (gold), draw new polygon boxes, reorder reading steps, and click <strong>Save</strong> to sync live! Plus, use <strong>Import &amp; Export</strong> to easily share your custom GVE edits with friends!'
     };
 
     actionBtns.forEach((btn) => {
