@@ -498,19 +498,32 @@
 
     if (action === 'manga-reader') {
       await closeModalsAndFullscreen();
+      try {
+        localStorage.setItem(`guided_pref_${MANGA_COMIC_ID}`, 'none');
+        localStorage.setItem('guided_pref_global_active', 'false');
+      } catch (_e) {}
+      if (window.GuidedView && window.GuidedView.ModeRegistry) {
+        window.GuidedView.ModeRegistry.disableAll({ persist: true });
+      }
       await ensureComicOpen(MANGA_COMIC_ID, 7);
+      if (window.GuidedView && window.GuidedView.ModeRegistry) {
+        window.GuidedView.ModeRegistry.disableAll({ persist: true });
+      }
     } else if (action === 'manga-panel-zoom') {
       await closeModalsAndFullscreen();
+      try {
+        localStorage.setItem(`guided_pref_${MANGA_COMIC_ID}`, 'manga-panel-zoom');
+        localStorage.setItem('guided_pref_global_active', 'true');
+        localStorage.setItem('guided_pref_last_mode', 'manga-panel-zoom');
+      } catch (_e) {}
       await ensureComicOpen(MANGA_COMIC_ID, 7);
       if (typeof window.openFullscreen === 'function') {
         window.openFullscreen();
         await new Promise((r) => setTimeout(r, 250));
-        if (window.GuidedView && typeof window.GuidedView.enable === 'function') {
-          await window.GuidedView.enable();
-          const mode = window.GuidedView.ModeRegistry?.getActiveMode?.();
-          if (mode && typeof mode.tryAdvance === 'function') {
-            mode.tryAdvance(1);
-          }
+        if (window.GuidedView && typeof window.GuidedView.enableMangaPanelZoom === 'function') {
+          await window.GuidedView.enableMangaPanelZoom();
+        } else if (window.GuidedView?.ModeRegistry) {
+          await window.GuidedView.ModeRegistry.enable('manga-panel-zoom');
         }
         if (typeof window.showFullscreenControls === 'function') {
           window.showFullscreenControls(false);
@@ -518,16 +531,19 @@
       }
     } else if (action === 'western-bubble-zoom') {
       await closeModalsAndFullscreen();
+      try {
+        localStorage.setItem(`guided_pref_${WESTERN_COMIC_ID}`, 'western-speech-zoom');
+        localStorage.setItem('guided_pref_global_active', 'true');
+        localStorage.setItem('guided_pref_last_mode', 'western-speech-zoom');
+      } catch (_e) {}
       await ensureComicOpen(WESTERN_COMIC_ID, 6);
       if (typeof window.openFullscreen === 'function') {
         window.openFullscreen();
         await new Promise((r) => setTimeout(r, 250));
-        if (window.GuidedView && typeof window.GuidedView.enableBubble === 'function') {
-          await window.GuidedView.enableBubble();
-          const mode = window.GuidedView.ModeRegistry?.getActiveMode?.();
-          if (mode && typeof mode.tryAdvance === 'function') {
-            mode.tryAdvance(1);
-          }
+        if (window.GuidedView && typeof window.GuidedView.enableWesternSpeechZoom === 'function') {
+          await window.GuidedView.enableWesternSpeechZoom();
+        } else if (window.GuidedView?.ModeRegistry) {
+          await window.GuidedView.ModeRegistry.enable('western-speech-zoom');
         }
         if (typeof window.showFullscreenControls === 'function') {
           window.showFullscreenControls(false);
@@ -577,8 +593,8 @@
     left.appendChild(homeLink);
 
     const modes = [
-      { id: 'manga-reader', label: '📖 1. Manga Reader Page' },
-      { id: 'manga-panel-zoom', label: '🔍 2. Manga Panel Zoom (Fullscreen)' },
+      { id: 'manga-reader', label: '📖 1. Manga Reader (Zoom Off)' },
+      { id: 'manga-panel-zoom', label: '🔲 2. Manga Panel Zoom' },
       { id: 'western-bubble-zoom', label: '💬 3. Western Speech Bubble Zoom' },
       { id: 'library-grid', label: '📚 4. Full Library Grid' },
       { id: 'reading-list-dag', label: '🔀 5. Crossover Reading Map' }
@@ -594,6 +610,16 @@
       btn.addEventListener('click', () => runDemoAction(m.id));
       left.appendChild(btn);
     });
+
+    const legend = document.createElement('div');
+    legend.style.cssText =
+      'display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#d1d5db;background:#1e1a14;border:1px solid #3a3226;border-radius:5px;padding:3px 8px;margin-left:4px;';
+    legend.innerHTML =
+      '<span style="color:#ffce3a;font-weight:700;">💡 Fullscreen UI:</span> ' +
+      '<span style="color:#ffffff;"><strong>🔲 Square Icon</strong> = Panel Zoom</span> <span style="color:#6b7280;">|</span> ' +
+      '<span style="color:#ffffff;"><strong>💬 Bubble Icon</strong> = Bubble Zoom</span> ' +
+      '<span style="color:#9ca3af;font-style:italic;">(visible in Fullscreen mode)</span>';
+    left.appendChild(legend);
 
     const right = document.createElement('div');
     right.style.cssText = 'display:flex;align-items:center;gap:8px;';

@@ -88,11 +88,11 @@ npm install -g comics-now`
 
     const HINTS = {
       'manga-reader':
-        '📖 <strong>Live Comics Now! Reader:</strong> Reading <em>Give My Regards to Black Jack #001</em> (Shuho Sato — Open License Manga). Use the Prev/Next buttons, Continuous Mode, or click <strong>Fullscreen</strong>!',
+        '📖 <strong>Live Comics Now! Reader:</strong> Reading <em>Give My Regards to Black Jack #001</em> (Shuho Sato — Open License Manga). Standard reader view with Panel Zoom and Bubble Zoom automatically off. (Click <strong>Fullscreen</strong> anytime to enter Fullscreen mode!)',
       'manga-panel-zoom':
-        '🔍 <strong>Manga Panel &amp; Bubble Zoom (Fullscreen):</strong> Click the left/right edges to step panel-by-panel right-to-left, or tap the <strong>Manga Panel Zoom</strong> / <strong>Speech Zoom</strong> icons in the top bar to tap any panel or speech bubble!',
+        '🔲 <strong>Manga Panel Zoom (Fullscreen):</strong> Panel Zoom is automatically turned on! Tap any comic panel to zoom in with razor-sharp clarity. <em>(In Fullscreen UI: <strong>🔲 Square Icon</strong> = Panel Zoom, <strong>💬 Bubble Icon</strong> = Bubble Zoom)</em>',
       'western-bubble-zoom':
-        '💬 <strong>Western Speech Bubble Zoom (Fullscreen):</strong> Reading <em>Zip Comics #001 (1940)</em>. Step through speech bubbles with the side arrows or tap the <strong>Speech Zoom</strong> icon in the top bar to tap any speech bubble!',
+        '💬 <strong>Western Bubble Speech Zoom (Fullscreen):</strong> Reading <em>Zip Comics #001 (1940)</em>. Speech Bubble Zoom is automatically turned on! Tap any dialogue bubble. <em>(In Fullscreen UI: <strong>💬 Bubble Icon</strong> = Bubble Zoom, <strong>🔲 Square Icon</strong> = Panel Zoom)</em>',
       'library-grid':
         '📚 <strong>Full Comics Now! Library:</strong> Browse Publishers, Series, and Comics—or click the <strong>📚 Reading Lists</strong> button to explore multi-series reading orders!',
       'reading-list-dag':
