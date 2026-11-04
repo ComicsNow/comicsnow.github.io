@@ -42,6 +42,11 @@ npm install -g comics-now`
         if (INSTALL_SNIPPETS[key]) {
           codeBlock.textContent = INSTALL_SNIPPETS[key];
         }
+        if (window.umami && typeof window.umami.track === 'function') {
+          try {
+            window.umami.track('install-tab-switch', { tab: key });
+          } catch (_e) {}
+        }
       });
     });
 
@@ -50,6 +55,13 @@ npm install -g comics-now`
         try {
           await navigator.clipboard.writeText(codeBlock.textContent || '');
           copyBtn.textContent = 'COPIED!';
+          if (window.umami && typeof window.umami.track === 'function') {
+            try {
+              window.umami.track('copy-install-command', {
+                tab: document.querySelector('[data-install-tab].active')?.getAttribute('data-install-tab') || 'compose'
+              });
+            } catch (_e) {}
+          }
           setTimeout(() => {
             copyBtn.textContent = 'COPY';
           }, 1800);

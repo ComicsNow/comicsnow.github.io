@@ -461,6 +461,12 @@
   });
 
   async function runDemoAction(action) {
+    if (window.umami && typeof window.umami.track === 'function') {
+      try {
+        window.umami.track('demo-mode-switch', { mode: action });
+      } catch (_e) {}
+    }
+
     if (window.GuidedView && window.GuidedView.cache) {
       window.GuidedView.cache.clear();
     }

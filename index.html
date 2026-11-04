@@ -27,6 +27,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=11">
 
+  <!-- Privacy-Friendly Analytics by Umami Cloud (Zero Cookies, GDPR Compliant) -->
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="7cdddfcb-5f98-44b3-a9ef-617b05efc4dd" data-auto-track="true"></script>
+
   <!-- JSON-LD Structured Data for Google Rich Snippets -->
   <script type="application/ld+json">
   {
@@ -113,12 +116,12 @@
         </ul>
       </nav>
       <div class="nav-cta-group">
-        <a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="btn btn-kofi">
+        <a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="btn btn-kofi" data-umami-event="nav-kofi-click">
           <svg class="kofi-logo" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.965-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.638c0 1.913-.985 2.667-2.059 3.015z"/></svg>
           <span>Support on Ko-fi</span>
         </a>
-        <a href="https://github.com/ComicsNow/gve-now-editor" target="_blank" rel="noopener" class="btn btn-outline">✏️ GVE Now!</a>
-        <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener" class="btn btn-primary">⭐ Star on GitHub</a>
+        <a href="https://github.com/ComicsNow/gve-now-editor" target="_blank" rel="noopener" class="btn btn-outline" data-umami-event="nav-gve-github">✏️ GVE Now!</a>
+        <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener" class="btn btn-primary" data-umami-event="nav-star-github">⭐ Star on GitHub</a>
       </div>
     </div>
   </header>
@@ -141,10 +144,10 @@
             Most comic servers were built a decade ago as static file browsers. <strong>Comics Now!</strong> re-imagines your CBZ, CBR, and PDF library with <strong>AI Panel &amp; Bubble Zoom</strong>, a visual <strong>GVE Now!</strong> touch-up editor, interactive <strong>Crossover Reading Order Maps</strong>, multi-source auto-tagging, and instant 1-command Docker or <code>npx</code> deployment.
           </p>
           <div class="hero-actions">
-            <a href="demo-reader/index.html?mode=manga-reader" class="btn btn-primary">🚀 Launch Live Reader Demo</a>
-            <a href="demo-gve/index.html" class="btn btn-blue">✏️ Launch GVE Now! Editor Demo</a>
-            <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener" class="btn btn-outline">⭐ Star on GitHub</a>
-            <a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="btn btn-kofi">
+            <a href="demo-reader/index.html?mode=manga-reader" class="btn btn-primary" data-umami-event="hero-launch-reader-demo">🚀 Launch Live Reader Demo</a>
+            <a href="demo-gve/index.html" class="btn btn-blue" data-umami-event="hero-launch-gve-demo">✏️ Launch GVE Now! Editor Demo</a>
+            <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener" class="btn btn-outline" data-umami-event="hero-star-github">⭐ Star on GitHub</a>
+            <a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="btn btn-kofi" data-umami-event="hero-kofi-click">
               <svg class="kofi-logo" viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.965-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.638c0 1.913-.985 2.667-2.059 3.015z"/></svg>
               <span>Support on Ko-fi</span>
             </a>
@@ -153,12 +156,12 @@
 
         <div class="terminal-card" aria-label="Quick Start Installation Commands">
           <div class="terminal-tabs" role="tablist">
-            <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-install-tab="compose">Docker Compose</button>
-            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-install-tab="docker">Docker CLI</button>
-            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-install-tab="npx">npx (60-Sec Start)</button>
+            <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-install-tab="compose" data-umami-event="install-tab-compose">Docker Compose</button>
+            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-install-tab="docker" data-umami-event="install-tab-docker">Docker CLI</button>
+            <button type="button" class="tab-btn" role="tab" aria-selected="false" data-install-tab="npx" data-umami-event="install-tab-npx">npx (60-Sec Start)</button>
           </div>
           <div class="terminal-body">
-            <button type="button" class="copy-btn" id="copy-install-btn">COPY</button>
+            <button type="button" class="copy-btn" id="copy-install-btn" data-umami-event="copy-install-command">COPY</button>
             <pre><code id="install-code-content">services:
   comics-now:
     image: ghcr.io/comicsnow/comics-now:latest
@@ -203,42 +206,42 @@
         </div>
 
         <div class="demo-launch-grid">
-          <a href="demo-reader/index.html?mode=manga-reader" class="demo-launch-card">
+          <a href="demo-reader/index.html?mode=manga-reader" class="demo-launch-card" data-umami-event="demo-launch-manga-reader">
             <span class="bento-tag">MODE 01 // COMIC READER VIEW</span>
             <h4>📖 Manga &amp; Comic Page Reader</h4>
             <p>Open <em>Give My Regards to Black Jack #001</em> in the standard reader view with single-page flip, continuous vertical scroll, E-Ink display modes, and page scrubbing (Panel Zoom and Bubble Zoom automatically off).</p>
             <span class="demo-launch-link">Launch Reader View →</span>
           </a>
 
-          <a href="demo-reader/index.html?mode=manga-panel-zoom" class="demo-launch-card highlight">
+          <a href="demo-reader/index.html?mode=manga-panel-zoom" class="demo-launch-card highlight" data-umami-event="demo-launch-manga-panel-zoom">
             <span class="bento-tag">MODE 02 // MANGA PANEL ZOOM (RTL)</span>
             <h4>🔲 Manga Panel Zoom</h4>
             <p>Jump straight into Fullscreen mode on Page 7 of <em>Give My Regards to Black Jack #001</em> with <strong>Manga Panel Zoom (🔲 square icon)</strong> automatically on. Tap any panel to zoom in, or switch to <strong>Bubble Zoom (💬 bubble icon)</strong> in the Fullscreen top bar.</p>
             <span class="demo-launch-link">Launch Manga Panel Zoom →</span>
           </a>
 
-          <a href="demo-reader/index.html?mode=western-bubble-zoom" class="demo-launch-card">
+          <a href="demo-reader/index.html?mode=western-bubble-zoom" class="demo-launch-card" data-umami-event="demo-launch-western-bubble-zoom">
             <span class="bento-tag">MODE 03 // WESTERN SPEECH BUBBLES</span>
             <h4>💬 Western Speech Bubble Zoom</h4>
             <p>Open <em>Zip Comics #001 (1940)</em> in Fullscreen mode with <strong>Speech Bubble Zoom (💬 bubble icon)</strong> automatically on. Tap any dialogue balloon to zoom into speech text, visible in the Fullscreen top toolbar.</p>
             <span class="demo-launch-link">Launch Western Bubble Zoom →</span>
           </a>
 
-          <a href="demo-reader/index.html?mode=library-grid" class="demo-launch-card">
+          <a href="demo-reader/index.html?mode=library-grid" class="demo-launch-card" data-umami-event="demo-launch-library-grid">
             <span class="bento-tag">MODE 04 // POSTER LIBRARY</span>
             <h4>📚 Full Library Grid &amp; Publishers</h4>
             <p>Explore the poster-forward publisher, series, and issue grid with Shuho Sato, MLJ Magazines, Rural Home, Dell Publishing, and Fawcett Publications.</p>
             <span class="demo-launch-link">Launch Library Grid →</span>
           </a>
 
-          <a href="demo-reader/index.html?mode=reading-list-dag" class="demo-launch-card">
+          <a href="demo-reader/index.html?mode=reading-list-dag" class="demo-launch-card" data-umami-event="demo-launch-crossover-map">
             <span class="bento-tag">MODE 05 // MULTI-SERIES TIMELINE</span>
             <h4>🔀 Visual Crossover Reading Map</h4>
             <p>Open the interactive multi-publisher crossover flowchart connecting 6 Golden Age issues with pan/zoom navigation and issue inspection.</p>
             <span class="demo-launch-link">Launch Crossover Map →</span>
           </a>
 
-          <a href="demo-gve/index.html" class="demo-launch-card gve-card">
+          <a href="demo-gve/index.html" class="demo-launch-card gve-card" data-umami-event="demo-launch-gve-editor">
             <span class="bento-tag">MODE 06 // COMPANION VISUAL EDITOR</span>
             <h4>✏️ GVE Now! Visual Panel &amp; Bubble Editor</h4>
             <p>Drag, resize, split, or draw new panel and speech bubble polygons, reorder the reading sequence, click <strong>Save</strong>, and switch straight back to the Reader to test your edits live!</p>
@@ -481,6 +484,6 @@
     <p>COMICS NOW! v3.1.0 — Released under the AGPL-3.0 License • <a href="https://github.com/ComicsNow/comics-now" class="text-cream">GitHub Repository</a> • <a href="https://www.npmjs.com/package/comics-now" class="text-cream">npm Package</a> • <a href="https://hub.docker.com/r/comicsnowdev/comics-now" class="text-cream">Docker Hub</a> • <a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="kofi-footer-link"><svg class="kofi-logo" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.062 3.511c-1.246 1.453-4.011 3.976-4.011 3.976s-.121.119-.31.023c-.076-.057-.108-.09-.108-.09-.443-.441-3.368-3.049-4.034-3.954-.709-.965-1.041-2.7-.091-3.71.951-1.01 3.005-1.086 4.363.407 0 0 1.565-1.782 3.468-.963 1.904.82 1.832 3.011.723 4.311zm6.173.478c-.928.116-1.682.028-1.682.028V7.284h1.77s1.971.551 1.971 2.638c0 1.913-.985 2.667-2.059 3.015z"/></svg> Support on Ko-fi</a></p>
   </footer>
 
-  <script src="app.js?v=11"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>
