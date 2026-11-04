@@ -180,8 +180,11 @@ body {
 }
 
 .kofi-logo {
+  display: inline-block;
   flex-shrink: 0;
   vertical-align: middle;
+  object-fit: contain;
+  border-radius: 3px;
 }
 
 .kofi-footer-link {
