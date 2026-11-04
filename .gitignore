@@ -1,0 +1,8 @@
+node_modules/
+.claude/
+.remember/
+.Jules/
+.jules/
+.agent-handoff.md
+*.log
+.DS_Store

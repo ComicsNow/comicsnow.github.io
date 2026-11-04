@@ -1,0 +1,340 @@
+import { state, devicesStatusDiv, devicesListDiv, refreshDevicesBtn } from '../globals.js';
+import { escapeHtmlValue } from './shared.js';
+import { html, raw, render, clearElement } from '../ui/template.js';
+
+const clear = typeof clearElement === 'function' ? clearElement : (el) => { if (el) { if (typeof el.replaceChildren === 'function') el.replaceChildren(); else el.innerHTML = ''; } };
+const renderContent = (typeof render === 'function' && render.length >= 2) ? render : (el, content) => {
+  if (!el) return;
+  const toStr = (c) => {
+    if (c === null || c === undefined) return '';
+    if (Array.isArray(c)) return c.map(toStr).join('');
+    if (typeof c === 'object' && typeof c.toHTML === 'function') return c.toHTML();
+    if (typeof c === 'object' && c.__isRawHtml) return c.html;
+    return String(c);
+  };
+  el.innerHTML = toStr(content);
+};
+const safeHtml = (typeof html !== 'undefined' && typeof html === 'function' && html.length > 0) ? html : (strings, ...values) => {
+  const formatVal = (v) => {
+    if (v === null || v === undefined) return '';
+    if (Array.isArray(v)) return v.map(formatVal).join('');
+    if (typeof v === 'object' && v.__isRawHtml) return v.html;
+    if (typeof v === 'object' && typeof v.toHTML === 'function') return v.toHTML();
+    return typeof escapeHtmlValue === 'function' ? escapeHtmlValue(v) : String(v);
+  };
+  let out = '';
+  for (let i = 0; i < strings.length; i++) {
+    out += strings[i];
+    if (i < values.length) {
+      out += formatVal(values[i]);
+    }
+  }
+  return { toHTML: () => out, html: out, __isRawHtml: true };
+};
+const safeRaw = (typeof raw !== 'undefined' && typeof raw === 'function' && raw.length > 0) ? raw : (v) => ({ __isRawHtml: true, html: String(v ?? '') });
+
+// --- DEVICE MANAGEMENT ---
+let devicesStatusTimeout = null;
+
+export function formatDeviceTimestamp(timestamp) {
+  if (!timestamp) return 'Never';
+  const numeric = Number(timestamp);
+  if (!Number.isFinite(numeric) || numeric <= 0) return 'Never';
+  const date = new Date(numeric);
+  if (Number.isNaN(date.getTime())) return 'Never';
+  return date.toLocaleString();
+}
+
+export function getStoredDeviceInfo() {
+  const deviceId = (window.syncManager && window.syncManager.deviceId) || localStorage.getItem('comicsNow_deviceId');
+  const deviceName = (window.syncManager && window.syncManager.deviceName) || localStorage.getItem('comicsNow_deviceName');
+  return { deviceId, deviceName };
+}
+
+export function setDevicesStatus(message = '', tone = 'info', autoClear) {
+  if (!devicesStatusDiv) return;
+
+  if (devicesStatusTimeout) {
+    clearTimeout(devicesStatusTimeout);
+    devicesStatusTimeout = null;
+  }
+
+  devicesStatusDiv.textContent = message;
+  devicesStatusDiv.classList.remove('text-red-400', 'text-green-400', 'text-gray-300', 'text-gray-400');
+
+  if (!message) {
+    devicesStatusDiv.classList.add('text-gray-400');
+    return;
+  }
+
+  if (tone === 'error') {
+    devicesStatusDiv.classList.add('text-red-400');
+  } else if (tone === 'success') {
+    devicesStatusDiv.classList.add('text-green-400');
+  } else {
+    devicesStatusDiv.classList.add('text-gray-300');
+  }
+
+  const shouldAutoClear = autoClear !== undefined ? autoClear : tone !== 'error';
+  if (shouldAutoClear) {
+    devicesStatusTimeout = setTimeout(() => {
+      devicesStatusTimeout = null;
+      setDevicesStatus('');
+    }, 4000);
+  }
+}
+
+export function renderDeviceList(devices) {
+  if (!devicesListDiv) return;
+
+  if (!Array.isArray(devices) || devices.length === 0) {
+    renderContent(devicesListDiv, safeHtml`<div class="bg-gray-700 text-gray-300 p-4 rounded-lg">No registered devices found.</div>`);
+    return;
+  }
+
+  const { deviceId: currentDeviceId } = getStoredDeviceInfo();
+
+  const deviceCards = devices.map((device) => {
+    const displayName = device.deviceName || 'Unnamed Device';
+    const deviceId = device.deviceId;
+    const lastSeen = formatDeviceTimestamp(device.lastSeen);
+    const created = formatDeviceTimestamp(device.created);
+    const isCurrent = currentDeviceId && device.deviceId === currentDeviceId;
+    const currentBadge = isCurrent
+      ? safeHtml`<span class="px-2 py-0.5 text-xs bg-purple-600 text-white rounded-full uppercase tracking-wide">This Device</span>`
+      : '';
+
+    return safeHtml`
+      <div class="bg-gray-800/50 rounded-lg p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border border-gray-700/50 hover:border-purple-500/50 transition-colors group">
+        <div class="space-y-1 text-sm">
+          <div class="text-white font-semibold text-base flex flex-wrap items-center gap-2">
+            <span>${displayName}</span>
+            ${currentBadge}
+          </div>
+          <div class="text-gray-400 font-mono text-xs break-all opacity-60">ID: ${deviceId}</div>
+          <div class="text-gray-400 mt-2">
+            <span class="text-gray-500">Last seen:</span> ${lastSeen}
+          </div>
+          <div class="text-gray-400">
+            <span class="text-gray-500">Registered:</span> ${created}
+          </div>
+        </div>
+        <div class="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            class="device-remove-btn bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white font-bold py-2 px-4 rounded-lg transition-all border border-red-600/30"
+            data-device-id="${device.deviceId}"
+            data-device-name="${displayName}"
+          >
+            Remove
+          </button>
+        </div>
+      </div>
+    `;
+  });
+
+  renderContent(devicesListDiv, deviceCards);
+
+  // Add event listeners to remove buttons
+  document.querySelectorAll('.device-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const deviceId = e.target.dataset.deviceId;
+      const deviceName = e.target.dataset.deviceName;
+
+      if (!confirm(`Are you sure you want to remove device "${deviceName}"? This will clear its sync history.`)) {
+        return;
+      }
+
+      try {
+        btn.disabled = true;
+        btn.textContent = 'Removing...';
+
+        const apiBaseUrl = state.API_BASE_URL || window.API_BASE_URL || '';
+        const res = await fetch(`${apiBaseUrl}/api/v1/devices/${deviceId}`, {
+          method: 'DELETE'
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.message || 'Failed to remove device');
+        }
+
+        setDevicesStatus('Device removed successfully', 'success', true);
+        await refreshDeviceList();
+      } catch (error) {
+        setDevicesStatus(`Failed to remove device: ${error.message}`, 'error', false);
+        btn.disabled = false;
+        btn.textContent = 'Remove';
+      }
+    });
+  });
+}
+
+export async function loadUserList() {
+  try {
+    const apiBaseUrl = state.API_BASE_URL || window.API_BASE_URL || '';
+    const res = await fetch(`${apiBaseUrl}/api/v1/users`);
+
+    // If forbidden (not admin), hide the filter
+    if (res.status === 403) {
+      const filterDiv = document.getElementById('devices-user-filter');
+      if (filterDiv) filterDiv.classList.add('hidden');
+      return;
+    }
+
+    const data = await res.json();
+
+    if (res.ok && data.users && Array.isArray(data.users)) {
+      const userSelect = document.getElementById('devices-user-select');
+      const filterDiv = document.getElementById('devices-user-filter');
+
+      if (userSelect && filterDiv) {
+        // Show filter for admins
+        filterDiv.classList.remove('hidden');
+
+        // Populate dropdown
+        renderContent(userSelect, safeHtml`<option value="">My Devices</option>`);
+        data.users.forEach(user => {
+          const option = document.createElement('option');
+          option.value = user.userId;
+          option.textContent = `${user.email} (${user.userId})`;
+          userSelect.appendChild(option);
+        });
+
+        // Add change event listener
+        if (!userSelect._changeListener) {
+          userSelect._changeListener = true;
+          userSelect.addEventListener('change', () => {
+            refreshDeviceList();
+          });
+        }
+      }
+    }
+  } catch (error) {
+    // Silently fail - user filter just won't be available
+  }
+}
+
+export async function refreshDeviceList() {
+  if (!devicesListDiv) return;
+
+  if (refreshDevicesBtn && refreshDevicesBtn.disabled) return;
+
+  const originalButtonLabel = refreshDevicesBtn ? refreshDevicesBtn.textContent : null;
+  if (refreshDevicesBtn) {
+    refreshDevicesBtn.disabled = true;
+    refreshDevicesBtn.textContent = 'Refreshing...';
+  }
+
+  setDevicesStatus('Loading devices...', 'info', false);
+  renderContent(devicesListDiv, safeHtml`<div class="bg-gray-700 text-gray-300 p-4 rounded-lg">Loading devices...</div>`);
+
+  try {
+    // Check if user filter is set (admin only)
+    const userSelect = document.getElementById('devices-user-select');
+    const selectedUserId = userSelect ? userSelect.value : '';
+
+    const apiBaseUrl = state.API_BASE_URL || window.API_BASE_URL || '';
+    const url = selectedUserId
+      ? `${apiBaseUrl}/api/v1/devices?userId=${encodeURIComponent(selectedUserId)}`
+      : `${apiBaseUrl}/api/v1/devices`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.message || 'Failed to load devices');
+    }
+
+    renderDeviceList(data.devices || []);
+
+    // Show viewing info for admins
+    if (data.viewingUserId && data.viewingUserId !== data.currentUserId) {
+      setDevicesStatus(`Viewing devices for user: ${data.viewingUserId}`, 'info', false);
+    } else {
+      setDevicesStatus('', 'info');
+    }
+  } catch (error) {
+    renderContent(devicesListDiv, safeHtml`<div class="bg-gray-700 text-red-400 p-4 rounded-lg">Failed to load devices.</div>`);
+    setDevicesStatus(`Failed to load devices: ${error.message}`, 'error', false);
+  } finally {
+    if (refreshDevicesBtn) {
+      refreshDevicesBtn.disabled = false;
+      refreshDevicesBtn.textContent = originalButtonLabel || 'Refresh';
+    }
+  }
+}
+
+if (refreshDevicesBtn && !refreshDevicesBtn._refreshListener) {
+  refreshDevicesBtn._refreshListener = async () => {
+    await refreshDeviceList();
+  };
+  refreshDevicesBtn.addEventListener('click', refreshDevicesBtn._refreshListener);
+}
+
+if (devicesListDiv && !devicesListDiv._deviceClickListener) {
+  devicesListDiv._deviceClickListener = async (event) => {
+    const button = event.target.closest('button[data-device-id]');
+    if (!button) return;
+
+    const deviceId = button.dataset.deviceId;
+    const deviceName = button.dataset.deviceName || 'Unnamed Device';
+    const { deviceId: currentDeviceId } = getStoredDeviceInfo();
+    const isCurrentDevice = currentDeviceId && deviceId === currentDeviceId;
+
+    const confirmMessage = isCurrentDevice
+      ? `Remove "${deviceName}"? This is the current device. Removing it will clear its sync history and reset local sync.`
+      : `Remove "${deviceName}"? This will clear its sync history.`;
+
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    const previousText = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Removing...';
+    setDevicesStatus('Removing device...', 'info', false);
+
+    try {
+      const apiBaseUrl = state.API_BASE_URL || window.API_BASE_URL || '';
+      const res = await fetch(`${apiBaseUrl}/api/v1/devices/${deviceId}`, { method: 'DELETE' });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to remove device');
+      }
+
+      if (isCurrentDevice && window.syncManager && typeof window.syncManager.clearStoredDevice === 'function') {
+        window.syncManager.clearStoredDevice();
+      }
+
+      setDevicesStatus('Device removed.', 'success');
+      await refreshDeviceList();
+    } catch (error) {
+      setDevicesStatus(`Failed to remove device: ${error.message}`, 'error', false);
+    } finally {
+      if (button) {
+        button.disabled = false;
+        button.textContent = previousText;
+      }
+    }
+  };
+
+  devicesListDiv.addEventListener('click', devicesListDiv._deviceClickListener);
+}
+
+state.formatDeviceTimestamp = formatDeviceTimestamp;
+state.getStoredDeviceInfo = getStoredDeviceInfo;
+state.setDevicesStatus = setDevicesStatus;
+state.renderDeviceList = renderDeviceList;
+state.loadUserList = loadUserList;
+state.refreshDeviceList = refreshDeviceList;
+
+if (typeof window !== 'undefined') {
+  window.formatDeviceTimestamp = formatDeviceTimestamp;
+  window.getStoredDeviceInfo = getStoredDeviceInfo;
+  window.setDevicesStatus = setDevicesStatus;
+  window.renderDeviceList = renderDeviceList;
+  window.loadUserList = loadUserList;
+  window.refreshDeviceList = refreshDeviceList;
+}

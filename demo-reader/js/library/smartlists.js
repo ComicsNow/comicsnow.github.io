@@ -1,0 +1,147 @@
+import { state } from '../globals.js';
+import {
+  LATEST_ADDED_DAYS,
+  isComicLatest,
+  isComicDownloaded,
+  isComicGuided,
+  isComicManga,
+  comicMatchesActiveSmartScope
+} from './smartlists/predicates.js';
+import {
+  PUB_SUFFIX_REGEX,
+  normalizePub,
+  stemPublisher,
+  isPubMatch,
+  matchesPublisher,
+  maybeFetchReadingLists,
+  fetchAndCacheReadingLists,
+  getCachedReadingLists,
+  setCachedReadingLists,
+  getReadingListsForPublisher,
+  updateReadingListFilterButtonCount
+} from './smartlists/publisher-match.js';
+import {
+  parseDownloadedTimestamp,
+  findDownloadedComicById,
+  updateDownloadedComicProgressData,
+  resolveTotalPagesForComic,
+  syncDownloadedComicStatusFromLibrary,
+  rebuildDownloadedComics,
+  getDownloadedSmartListComics,
+  getDownloadedSmartListError,
+  updateDownloadedSmartListComic
+} from './smartlists/downloaded.js';
+import {
+  updateLatestButtonCount,
+  updateDownloadedButtonCount,
+  updateGuidedButtonCount,
+  updateMangaFilterButtonCount,
+  rebuildMangaSmartLists,
+  getMangaComics,
+  getNonMangaComics,
+  rebuildGuidedComics,
+  getGuidedComics,
+  rebuildLatestComics,
+  getLatestComics
+} from './smartlists/counters.js';
+
+export {
+  LATEST_ADDED_DAYS,
+  isComicLatest,
+  isComicDownloaded,
+  isComicGuided,
+  isComicManga,
+  comicMatchesActiveSmartScope,
+  PUB_SUFFIX_REGEX,
+  normalizePub,
+  stemPublisher,
+  isPubMatch,
+  matchesPublisher,
+  maybeFetchReadingLists,
+  fetchAndCacheReadingLists,
+  getCachedReadingLists,
+  setCachedReadingLists,
+  getReadingListsForPublisher,
+  updateReadingListFilterButtonCount,
+  parseDownloadedTimestamp,
+  findDownloadedComicById,
+  updateDownloadedComicProgressData,
+  resolveTotalPagesForComic,
+  syncDownloadedComicStatusFromLibrary,
+  rebuildDownloadedComics,
+  getDownloadedSmartListComics,
+  getDownloadedSmartListError,
+  updateDownloadedSmartListComic,
+  updateLatestButtonCount,
+  updateDownloadedButtonCount,
+  updateGuidedButtonCount,
+  updateMangaFilterButtonCount,
+  rebuildMangaSmartLists,
+  getMangaComics,
+  getNonMangaComics,
+  rebuildGuidedComics,
+  getGuidedComics,
+  rebuildLatestComics,
+  getLatestComics
+};
+
+const LibrarySmartLists = {
+  LATEST_ADDED_DAYS,
+  isComicLatest,
+  isComicDownloaded,
+  isComicGuided,
+  isComicManga,
+  comicMatchesActiveSmartScope,
+  updateLatestButtonCount,
+  updateDownloadedButtonCount,
+  updateGuidedButtonCount,
+  rebuildLatestComics,
+  rebuildGuidedComics,
+  rebuildMangaSmartLists,
+  updateDownloadedComicProgressData,
+  resolveTotalPagesForComic,
+  syncDownloadedComicStatusFromLibrary,
+  rebuildDownloadedComics,
+  getLatestComics,
+  getGuidedComics,
+  getMangaComics,
+  getNonMangaComics,
+  getDownloadedSmartListComics,
+  getDownloadedSmartListError,
+  updateDownloadedSmartListComic,
+  updateReadingListFilterButtonCount,
+  getReadingListsForPublisher,
+  fetchAndCacheReadingLists,
+  getCachedReadingLists,
+  setCachedReadingLists
+};
+
+export default LibrarySmartLists;
+
+state.LibrarySmartLists = LibrarySmartLists;
+Object.assign(state, LibrarySmartLists);
+
+state.rebuildMangaSmartLists = rebuildMangaSmartLists;
+state.getMangaComics = getMangaComics;
+state.getNonMangaComics = getNonMangaComics;
+state.comicMatchesActiveSmartScope = comicMatchesActiveSmartScope;
+state.updateDownloadedComicProgressData = updateDownloadedComicProgressData;
+state.rebuildDownloadedComics = rebuildDownloadedComics;
+state.updateDownloadedSmartListComic = updateDownloadedSmartListComic;
+state.updateReadingListFilterButtonCount = updateReadingListFilterButtonCount;
+state.getReadingListsForPublisher = getReadingListsForPublisher;
+
+if (typeof window !== 'undefined') {
+  window.LibrarySmartLists = LibrarySmartLists;
+  Object.assign(window, LibrarySmartLists);
+  
+  window.rebuildMangaSmartLists = rebuildMangaSmartLists;
+  window.getMangaComics = getMangaComics;
+  window.getNonMangaComics = getNonMangaComics;
+  window.comicMatchesActiveSmartScope = comicMatchesActiveSmartScope;
+  window.updateDownloadedComicProgressData = updateDownloadedComicProgressData;
+  window.rebuildDownloadedComics = rebuildDownloadedComics;
+  window.updateDownloadedSmartListComic = updateDownloadedSmartListComic;
+  window.updateReadingListFilterButtonCount = updateReadingListFilterButtonCount;
+  window.getReadingListsForPublisher = getReadingListsForPublisher;
+}

@@ -1,0 +1,107 @@
+import { state, global as canonicalGlobal } from './globals.js';
+
+const global = typeof canonicalGlobal !== 'undefined' ? canonicalGlobal : new Proxy(typeof window !== 'undefined' ? window : globalThis, {
+  get: (t, p) => (typeof state !== 'undefined' && p in state) ? state[p] : t[p],
+  set: (t, p, v) => { if (typeof state !== 'undefined') state[p] = v; try { t[p] = v; } catch {} return true; }
+});
+
+async function initializeOfflineFeatures() {
+  const OfflineDB = global.OfflineDB;
+  const OfflineStatus = global.OfflineStatus;
+  const OfflineDownloads = global.OfflineDownloads;
+
+  if (!OfflineDB || !OfflineStatus || !OfflineDownloads) {
+    return;
+  }
+
+  // Initialize downloadedComicIds early to ensure offline reading works from any view
+  try {
+    if (typeof OfflineDB.getAllDownloadedComicIds === 'function') {
+      await OfflineDB.getAllDownloadedComicIds();
+    }
+  } catch (error) {
+    console.error('[OFFLINE] Failed to initialize downloaded comic IDs:', error);
+  }
+
+  if (typeof window !== 'undefined') {
+    global.addEventListener('online', () => {
+      OfflineStatus.updateOfflineIndicator();
+      OfflineStatus.scheduleOfflineProgressSync(true);
+      OfflineStatus.syncOfflineStatuses().catch(error => {
+        
+      });
+
+      if (typeof global.fetchLibraryFromServer === 'function') {
+        global.fetchLibraryFromServer().catch(error => {
+          
+        });
+      }
+    });
+
+    global.addEventListener('offline', () => {
+      OfflineStatus.updateOfflineIndicator();
+      // On mobile network handover, verify if connectivity is actually lost
+      if (typeof OfflineStatus.checkServerConnectivity === 'function') {
+        OfflineStatus.checkServerConnectivity().catch(() => {});
+      }
+    });
+
+    // Proactively probe and self-heal connectivity when the user unlocks or resumes the PWA
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && typeof OfflineStatus.checkServerConnectivity === 'function') {
+          OfflineStatus.checkServerConnectivity().catch(() => {});
+        }
+      });
+    }
+
+    global.addEventListener('focus', () => {
+      if (typeof OfflineStatus.checkServerConnectivity === 'function') {
+        OfflineStatus.checkServerConnectivity().catch(() => {});
+      }
+    });
+
+    // Note: Since DOMContentLoaded might have already fired, we check document.readyState
+    const onDOMReady = () => {
+      OfflineStatus.updateOfflineIndicator();
+      setInterval(() => {
+        OfflineStatus.updateOfflineIndicator();
+        // If the app is flagged as offline, probe server connectivity to break the Android Doze deadlock
+        if (typeof OfflineStatus.isAppOnline === 'function' && !OfflineStatus.isAppOnline()) {
+          OfflineStatus.checkServerConnectivity().catch(() => {});
+        }
+      }, 5000);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', onDOMReady);
+    } else {
+      onDOMReady();
+    }
+
+    setInterval(() => {
+      const isOnline = typeof OfflineStatus.isAppOnline === 'function'
+        ? OfflineStatus.isAppOnline()
+        : navigator.onLine !== false;
+      if (isOnline) {
+        OfflineStatus.enhancedBackgroundSync().catch(error => {
+          
+        });
+      }
+    }, 2 * 60 * 1000);
+  }
+}
+
+export {
+  initializeOfflineFeatures
+};
+
+state.initializeOfflineFeatures = initializeOfflineFeatures;
+
+if (typeof window !== 'undefined') {
+  window.initializeOfflineFeatures = initializeOfflineFeatures;
+}
+
+// Auto-initialize on load
+initializeOfflineFeatures();
+

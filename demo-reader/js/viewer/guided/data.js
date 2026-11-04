@@ -1,0 +1,151 @@
+import { state } from '../../globals.js';
+
+export const cache = new Map(); // comicId -> data | null
+
+export function api(p) {
+  const base = state.API_BASE_URL || (typeof window !== 'undefined' ? window.API_BASE_URL : '') || '';
+  return `${base}${p}`;
+}
+
+export async function loadGuidedView(comicId) {
+  if (!comicId) return null;
+  if (cache.has(comicId)) return cache.get(comicId);
+  try {
+    const res = await fetch(api(`/api/v1/comics/${encodeURIComponent(comicId)}/guided-view`));
+    if (!res.ok) { cache.set(comicId, null); return null; }
+    const data = await res.json();
+    cache.set(comicId, data);
+    return data;
+  } catch {
+    cache.set(comicId, null);
+    return null;
+  }
+}
+
+export function currentPagePanels() {
+  const comic = state.currentComic || window.currentComic;
+  if (!comic) return [];
+  const data = cache.get(comic.id);
+  if (!data || !data.pages) return [];
+  const getPages = state.getViewerPages || window.getViewerPages;
+  const pages = getPages?.() || [];
+  const pageIndex = (state.currentPageIndex !== undefined && state.currentPageIndex !== null) ? state.currentPageIndex : window.currentPageIndex;
+  const fname = pages[pageIndex];
+  if (!fname) return [];
+  
+  // Handle multiple schema versions
+  const pageData = data.pages[fname];
+  if (Array.isArray(pageData)) return pageData;
+  if (pageData) {
+    // Prioritize granular sequence if available
+    if (Array.isArray(pageData.sequence) && pageData.sequence.length > 0) return pageData.sequence;
+    if (Array.isArray(pageData.panels)) return pageData.panels;
+  }
+  return [];
+}
+
+export function currentPageBubbles() {
+  const comic = state.currentComic || window.currentComic;
+  if (!comic) return [];
+  const data = cache.get(comic.id);
+  if (!data || !data.pages) return [];
+  const getPages = state.getViewerPages || window.getViewerPages;
+  const pages = getPages?.() || [];
+  const pageIndex = (state.currentPageIndex !== undefined && state.currentPageIndex !== null) ? state.currentPageIndex : window.currentPageIndex;
+  const fname = pages[pageIndex];
+  if (!fname) return [];
+  
+  const pageData = data.pages[fname];
+  if (!pageData) return [];
+  if (!isMangaComic() && Array.isArray(pageData.sequence) && pageData.sequence.length > 0) {
+    return pageData.sequence;
+  }
+  if (Array.isArray(pageData.bubbles)) return pageData.bubbles;
+  return [];
+}
+
+// Raw boxes from the manga model (panels + bubbles mixed, pre-sequencing).
+// For manga sidecars, `panels` field holds the full unfiltered detection set.
+export function currentPageRawBoxes() {
+  const comic = state.currentComic || window.currentComic;
+  if (!comic) return [];
+  const data = cache.get(comic.id);
+  if (!data || !data.pages) return [];
+  const getPages = state.getViewerPages || window.getViewerPages;
+  const pages = getPages?.() || [];
+  const pageIndex = (state.currentPageIndex !== undefined && state.currentPageIndex !== null) ? state.currentPageIndex : window.currentPageIndex;
+  const fname = pages[pageIndex];
+  if (!fname) return [];
+  const pd = data.pages[fname];
+  if (pd && Array.isArray(pd.panels)) return pd.panels;
+  return [];
+}
+
+export function isMangaComic() {
+  const c = state.currentComic || window.currentComic;
+  return !!(c && (c.mangaMode === true || c.mangaMode == 1));
+}
+
+// Bubbles the editor wrote for the current manga page, if any. Editor
+// regeneration always writes sequence = panels + bubbles, so an editor-written
+// page's bubbles are all referenced by its sequence. Legacy sidecars can carry
+// a bubbles list from a separate detection pass that the sequence never
+// references — those pages must keep the heuristic classification.
+export function mangaExplicitBubbles() {
+  const bubbles = currentPageBubbles();
+  if (bubbles.length === 0) return [];
+  const comic = state.currentComic || window.currentComic;
+  const data = cache.get(comic.id);
+  const getPages = state.getViewerPages || window.getViewerPages;
+  const pages = getPages?.() || [];
+  const pageIndex = (state.currentPageIndex !== undefined && state.currentPageIndex !== null) ? state.currentPageIndex : window.currentPageIndex;
+  const fname = pages[pageIndex];
+  const pageData = fname && data && data.pages ? data.pages[fname] : null;
+  const sequence = Array.isArray(pageData && pageData.sequence) ? pageData.sequence : [];
+  const key = (b) => `${b[0]},${b[1]},${b[2]},${b[3]}`;
+  const inSequence = new Set(sequence.map(key));
+  return bubbles.every((b) => inSequence.has(key(b))) ? bubbles : [];
+}
+
+// Flat list of speech-bubble boxes for the current manga page.
+// Editor-written pages carry an explicit, ordered bubbles list — step exactly
+// that. Legacy pages keep the heuristic classify flatten.
+export function mangaPageBubbles() {
+  const explicit = mangaExplicitBubbles();
+  if (explicit.length > 0) return explicit;
+  const out = [];
+  const panels = state.GuidedView.classifyMangaPage();
+  for (const p of panels) for (const b of p.bubbles) out.push(b);
+  return out;
+}
+
+export const currentPageRawPanels = currentPageRawBoxes;
+
+// Assign to state.GuidedView and window.GuidedView
+Object.assign(state.GuidedView, {
+  cache,
+  loadGuidedView,
+  currentPagePanels,
+  currentPageRawPanels,
+  currentPageBubbles,
+  currentPageRawBoxes,
+  isMangaComic,
+  mangaExplicitBubbles,
+  mangaPageBubbles,
+  api
+});
+
+if (typeof window !== 'undefined' && window.GuidedView && window.GuidedView !== state.GuidedView) {
+  Object.assign(window.GuidedView, {
+    cache,
+    loadGuidedView,
+    currentPagePanels,
+    currentPageRawPanels,
+    currentPageBubbles,
+    currentPageRawBoxes,
+    isMangaComic,
+    mangaExplicitBubbles,
+    mangaPageBubbles,
+    api
+  });
+}

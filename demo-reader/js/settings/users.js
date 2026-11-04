@@ -1,0 +1,209 @@
+import { state, escapeHtml } from '../globals.js';
+import { formatTimestamp } from './shared.js';
+import { html, raw, render, clearElement } from '../ui/template.js';
+import { showUserAccessView } from './user-access.js';
+import { showUserStatsView } from './user-stats.js';
+import { startImpersonation } from '../impersonation.js';
+
+const renderContent = (typeof render === 'function' && render.length >= 2) ? render : (el, content) => {
+  if (!el) return;
+  const toStr = (c) => {
+    if (c === null || c === undefined) return '';
+    if (Array.isArray(c)) return c.map(toStr).join('');
+    if (typeof c === 'object' && typeof c.toHTML === 'function') return c.toHTML();
+    if (typeof c === 'object' && c.__isRawHtml) return c.html;
+    return String(c);
+  };
+  el.innerHTML = toStr(content);
+};
+const safeHtml = (typeof html !== 'undefined' && typeof html === 'function' && html.length > 0) ? html : (strings, ...values) => {
+  const formatVal = (v) => {
+    if (v === null || v === undefined) return '';
+    if (Array.isArray(v)) return v.map(formatVal).join('');
+    if (typeof v === 'object' && v.__isRawHtml) return v.html;
+    if (typeof v === 'object' && typeof v.toHTML === 'function') return v.toHTML();
+    return typeof escapeHtml === 'function' ? escapeHtml(v) : String(v);
+  };
+  let out = '';
+  for (let i = 0; i < strings.length; i++) {
+    out += strings[i];
+    if (i < values.length) {
+      out += formatVal(values[i]);
+    }
+  }
+  return { toHTML: () => out, html: out, __isRawHtml: true };
+};
+const safeRaw = (typeof raw !== 'undefined' && typeof raw === 'function' && raw.length > 0) ? raw : (v) => ({ __isRawHtml: true, html: String(v ?? '') });
+
+// --- USER MANAGEMENT ---
+export const settingsTabUsers = document.getElementById('settings-tab-users');
+export const refreshUsersBtn = document.getElementById('refresh-users-btn');
+export const usersStatusDiv = document.getElementById('users-status');
+export const usersListDiv = document.getElementById('users-list');
+
+export function setUsersStatus(message, type = 'info', showSpinner = false) {
+  if (!usersStatusDiv) return;
+  usersStatusDiv.textContent = message;
+  usersStatusDiv.className = `text-sm mb-3 ${type === 'error' ? 'text-red-400' : 'text-gray-400'}`;
+}
+
+export async function refreshUsersList() {
+  if (!usersListDiv) return;
+
+  try {
+    setUsersStatus('Loading users...', 'info', true);
+
+    const apiBaseUrl = state.API_BASE_URL || window.API_BASE_URL || '';
+    const response = await fetch(`${apiBaseUrl}/api/v1/users`);
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      throw new Error(data.message || 'Failed to load users');
+    }
+
+    const users = data.users || [];
+
+    if (users.length === 0) {
+      renderContent(usersListDiv, safeHtml`<p class="text-gray-400 text-center py-4">No users found</p>`);
+      setUsersStatus('No users registered', 'info', false);
+      return;
+    }
+
+    setUsersStatus(`${users.length} user${users.length === 1 ? '' : 's'} registered`, 'info', false);
+
+    const userCards = users.map(user => safeHtml`
+      <div class="user-card bg-gray-800/50 rounded-lg p-4 flex flex-col gap-3 border border-gray-700/50 hover:border-purple-500/50 transition-all group cursor-pointer" data-user-id="${user.userId}" data-user-email="${user.email}" data-user-role="${user.role}">
+        <div class="min-w-0">
+          <div class="flex items-start justify-between gap-2 mb-2 min-w-0">
+            <div class="flex items-center gap-2 min-w-0 flex-1">
+              <div class="p-2 rounded-full bg-purple-600/10 text-purple-400 shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+              <span class="text-white font-bold text-sm sm:text-base break-all leading-snug">${user.email}</span>
+            </div>
+            <span class="px-2 py-0.5 text-[11px] font-bold rounded-full uppercase tracking-wider ${user.role === 'admin' ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300'} shrink-0 ml-auto">
+              ${user.role}
+            </span>
+          </div>
+          <div class="text-xs sm:text-sm text-gray-400 space-y-1 pl-9 sm:pl-10">
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 text-xs uppercase tracking-tight">Registered:</span>
+              <span class="text-gray-300">${formatTimestamp(user.created)}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-500 text-xs uppercase tracking-tight">Last seen:</span>
+              <span class="text-gray-300">${formatTimestamp(user.lastSeen)}</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 pt-1 pl-9 sm:pl-10 border-t border-gray-700/30">
+          <button type="button" class="user-permissions-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-purple-600/40 text-purple-100 hover:bg-purple-600/60 border border-purple-500/60 shadow-xs transition-all flex items-center gap-1.5" title="Edit Permissions">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5 text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            <span>Edit Permissions</span>
+          </button>
+          <button type="button" class="user-stats-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600/20 text-blue-300 hover:bg-blue-600/40 border border-blue-500/30 transition-colors flex items-center gap-1.5" title="View Reading Stats">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span>Stats</span>
+          </button>
+          ${user.role !== 'admin'
+            ? safeHtml`<button type="button" class="user-impersonate-btn px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber-500/20 text-amber-300 hover:bg-amber-500/40 border border-amber-500/30 transition-colors flex items-center gap-1.5" title="Log in as user">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+                <span>Login as</span>
+              </button>`
+            : ''}
+        </div>
+      </div>
+    `);
+    renderContent(usersListDiv, userCards);
+
+    // Add click handlers to user cards
+    document.querySelectorAll('.user-card').forEach(card => {
+      const userId = card.dataset.userId;
+      const userEmail = card.dataset.userEmail;
+      const userRole = card.dataset.userRole;
+
+      // Card body → manage access
+      card.addEventListener('click', () => {
+        const fn = state.showUserAccessView || (typeof showUserAccessView === 'function' ? showUserAccessView : window.showUserAccessView);
+        if (typeof fn === 'function') {
+          fn(userId, userEmail, userRole);
+        }
+      });
+
+      // Edit Permissions button
+      const permBtn = card.querySelector('.user-permissions-btn');
+      if (permBtn) {
+        permBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fn = state.showUserAccessView || (typeof showUserAccessView === 'function' ? showUserAccessView : window.showUserAccessView);
+          if (typeof fn === 'function') {
+            fn(userId, userEmail, userRole);
+          }
+        });
+      }
+
+      // Stats button
+      const statsBtn = card.querySelector('.user-stats-btn');
+      if (statsBtn) {
+        statsBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const fn = state.showUserStatsView || (typeof showUserStatsView === 'function' ? showUserStatsView : window.showUserStatsView);
+          if (typeof fn === 'function') fn(userId, userEmail);
+        });
+      }
+
+      // Login-as (impersonate) button
+      const impBtn = card.querySelector('.user-impersonate-btn');
+      if (impBtn) {
+        impBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!confirm(`Log in as ${userEmail}?\n\nYou will see the app exactly as they do (read-only). They will not be notified. An audit entry is recorded.`)) return;
+          const fn = state.startImpersonation || (typeof startImpersonation === 'function' ? startImpersonation : window.startImpersonation);
+          if (typeof fn === 'function') fn(userId, userEmail);
+        });
+      }
+    });
+
+  } catch (error) {
+
+    setUsersStatus(`Failed to load users: ${error.message}`, 'error', false);
+    renderContent(usersListDiv, safeHtml`<p class="text-red-400 text-center py-4">Failed to load users</p>`);
+  }
+}
+
+// Initialize users tab
+if (settingsTabUsers) {
+  settingsTabUsers.addEventListener('click', () => {
+    refreshUsersList();
+  });
+}
+
+if (refreshUsersBtn) {
+  refreshUsersBtn.addEventListener('click', () => {
+    refreshUsersList();
+  });
+}
+
+state.settingsTabUsers = settingsTabUsers;
+state.refreshUsersBtn = refreshUsersBtn;
+state.usersStatusDiv = usersStatusDiv;
+state.usersListDiv = usersListDiv;
+state.setUsersStatus = setUsersStatus;
+state.refreshUsersList = refreshUsersList;
+
+if (typeof window !== 'undefined') {
+  window.settingsTabUsers = settingsTabUsers;
+  window.refreshUsersBtn = refreshUsersBtn;
+  window.usersStatusDiv = usersStatusDiv;
+  window.usersListDiv = usersListDiv;
+  window.setUsersStatus = setUsersStatus;
+  window.refreshUsersList = refreshUsersList;
+}

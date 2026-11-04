@@ -1,0 +1,865 @@
+// ARCHITECTURAL_EXEMPTION: W3C Service Worker single-file scope specification constraint
+// service-worker.js
+// PWA service worker that respects subpath deployment (e.g., /comics-home)
+
+const SCOPE_URL = new URL(self.registration.scope);
+const BASE_PATH = SCOPE_URL.pathname;
+const CACHE_VERSION = 'v9.2';
+const CACHE_NAME = `comics-now-${CACHE_VERSION}-${BASE_PATH}`;
+const DOWNLOADS_CACHE_NAME = 'comics-now-downloads';
+
+// Assets relative to the scope. DO NOT start with "/" (root) here.
+const ASSET_PATHS = [
+  'index.html',
+  'assets/index.js',
+  'assets/index.css',
+  'assets/background.png',
+  'app.js',
+  'style.css',
+  'tailwind.css',
+  'jszip.min.js',
+  'manifest.json',
+  'icons/icon-192x192.png',
+  'icons/icon-512x512.png',
+  'favicon.ico'
+];
+
+// Build absolute URLs for caching within this scope
+const ASSET_URLS = ASSET_PATHS.map(p => new URL(p, self.registration.scope).toString());
+
+// Helper: is this request for our own origin & inside our scope?
+function isInScope(url) {
+  return url.origin === self.location.origin && url.pathname.startsWith(BASE_PATH);
+}
+
+// Helper: is this an API request? (network-first)
+function isApi(url) {
+  return isInScope(url) && url.pathname.includes('/api/');
+}
+
+// INSTALL: pre-cache core assets with better error handling
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then(async cache => {
+        await Promise.allSettled(
+          ASSET_URLS.map(async url => {
+            try {
+              const res = await fetch(url, { cache: 'reload' });
+              if (res.ok) {
+                await cache.put(url, res);
+              }
+            } catch (err) {
+              console.warn('[SW] Pre-cache failed for', url, err);
+            }
+          })
+        );
+      })
+      .then(() => self.skipWaiting())
+      .catch(() => self.skipWaiting())
+  );
+});
+
+// ACTIVATE: clean old caches for other base paths/versions
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(
+      names
+        .filter(n => n.startsWith('comics-now-') && n !== CACHE_NAME && n !== DOWNLOADS_CACHE_NAME)
+        .map(n => caches.delete(n))
+    );
+    await self.clients.claim();
+  })());
+});
+
+// FETCH: cache-first for static assets; network-first for API; fallback to cached index.html for navigations
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Only handle GETs inside our own scope
+  if (req.method !== 'GET') return;
+  if (!isInScope(url)) return;
+
+  // DOWNLOAD BYPASS: Let browser handle downloads directly
+  if (/\/(?:comics\/)?download(?:\/|$)/.test(url.pathname)) {
+    return;
+  }
+
+  // HEALTH CHECK BYPASS: Let browser handle connectivity health probes directly
+  if (url.pathname.includes('/api/v1/health')) {
+    return;
+  }
+
+  // PLUGIN BYPASS: Private plugin bundles are never PWA-cached. Their loader
+  // script skips them offline and in standalone/fullscreen modes, and they
+  // must not be served from cache in any other case either.
+  if (url.pathname.includes('/plugins/')) {
+    return;
+  }
+
+  // EMBEDDED FRAME BYPASS: Navigations of embedded frames never flow through
+  // the PWA cache. Their documents are not the app shell, so they must neither
+  // be cached as it nor served from it.
+  const secFetchDest = req.headers.get('sec-fetch-dest') || '';
+  if (secFetchDest === 'iframe') {
+    return;
+  }
+
+  // SPECIAL CACHE: Comic Pages, Thumbnails, and Guided View JSON (DOWNLOADS_CACHE_NAME)
+  const isComicPage = url.pathname.includes('/api/v1/comics/pages/image');
+  const isThumbnail = url.pathname.includes('/thumbnails/');
+  const isGuidedView = url.pathname.match(/\/api\/v1\/comics\/.*\/guided-view/);
+
+  if (isComicPage || isThumbnail || isGuidedView) {
+    event.respondWith((async () => {
+      const cache = await caches.open(DOWNLOADS_CACHE_NAME);
+      
+      // Try network first (to get latest if online), but fallback to cache
+      try {
+        const net = await fetch(req, { cache: 'no-store' });
+        if (net.ok) {
+          cache.put(req, net.clone());
+          return net;
+        }
+      } catch (err) {
+        // Ignore network errors and try cache
+      }
+
+      const match = await cache.match(req);
+      if (match) return match;
+
+      return new Response('Offline - Image not cached', {
+        status: 503,
+        statusText: 'Offline',
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    })());
+    return;
+  }
+
+  // API: network-first with offline JSON fallback
+  if (isApi(url)) {
+    event.respondWith((async () => {
+      try {
+        return await fetch(req, { cache: 'no-store' });
+      } catch (err) {
+        const cache = await caches.open(CACHE_NAME);
+        const match = await cache.match(req);
+        return match || new Response('{"offline":true}', {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    })());
+    return;
+  }
+
+  // Navigations (HTML): network-first, fallback to cached app shell
+  if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      try {
+        const net = await fetch(req, { cache: 'no-store' });
+        // Only the app's own entry document may refresh the cached shell.
+        // Other in-scope HTML navigations (embedded UI pages, foreign
+        // documents) are served but never cached, so they cannot replace
+        // the app shell with foreign HTML.
+        const shellUrl = new URL('index.html', self.registration.scope);
+        const shellPath = shellUrl.pathname;
+        const rootPath = BASE_PATH.replace(/\/+$/, '');
+        const reqPath = url.pathname;
+        const isShellNavigation = reqPath === shellPath ||
+          reqPath === rootPath ||
+          reqPath === `${rootPath}/` ||
+          reqPath === `${rootPath}/index.html`;
+        if (net.ok && url.origin === self.location.origin && isShellNavigation) {
+          cache.put(shellUrl.toString(), net.clone());
+        }
+        return net;
+      } catch (err) {
+        const shell = await cache.match(new URL('index.html', self.registration.scope).toString()) ||
+                      await cache.match(new URL('./index.html', self.registration.scope).toString()) ||
+                      await cache.match(req);
+        if (shell) return shell;
+        return new Response('Offline - No cached app available', { status: 503, statusText: 'Offline' });
+      }
+    })());
+    return;
+  }
+
+  // Static assets inside scope: network-first for JS & CSS (to get updates), cache-first for other assets
+  event.respondWith((async () => {
+    const cache = await caches.open(CACHE_NAME);
+
+    // For JavaScript & CSS files, try network first to get updates, then cache
+    if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css')) {
+      const isJs = url.pathname.endsWith('.js');
+      const isCss = url.pathname.endsWith('.css');
+      try {
+        const net = await fetch(req, { cache: 'no-store' });
+        if (net.ok && url.origin === self.location.origin) {
+          cache.put(req, net.clone());
+        }
+        return net;
+      } catch (err) {
+        // Fallback to cache when offline
+        const hit = await cache.match(req);
+        if (hit) return hit;
+
+        // Scope-relative URL fallback (e.g. /comics/assets/index.js -> ./assets/index.js)
+        const relUrl = new URL(url.pathname.replace(BASE_PATH, ''), self.registration.scope).toString();
+        const relHit = await cache.match(relUrl);
+        if (relHit) return relHit;
+
+        // Offline resilience fallback:
+        // If a hashed asset or index bundle was requested, search for any matching cached asset
+        const cacheKeys = await cache.keys();
+        for (const key of cacheKeys) {
+          const keyUrl = new URL(key.url);
+          if (isJs && keyUrl.pathname.endsWith('.js')) {
+            if (
+              (url.pathname.includes('/assets/') && keyUrl.pathname.includes('/assets/')) ||
+              (url.pathname.includes('index') && keyUrl.pathname.includes('index'))
+            ) {
+              const cachedJs = await cache.match(key);
+              if (cachedJs) return cachedJs;
+            }
+          }
+          if (isCss && keyUrl.pathname.endsWith('.css')) {
+            if (
+              (url.pathname.includes('/assets/') && keyUrl.pathname.includes('/assets/')) ||
+              (url.pathname.includes('index') && keyUrl.pathname.includes('index'))
+            ) {
+              const cachedCss = await cache.match(key);
+              if (cachedCss) return cachedCss;
+            }
+          }
+        }
+
+        return new Response(`Offline - Asset not cached (${url.pathname})`, {
+          status: 503,
+          statusText: 'Offline',
+          headers: { 'Content-Type': isJs ? 'text/javascript' : (isCss ? 'text/css' : 'text/plain') }
+        });
+      }
+    }
+
+    // For other static assets (images, icons, etc.): cache-first
+    const hit = await cache.match(req);
+    if (hit) return hit;
+
+    try {
+      const net = await fetch(req);
+      if (net.ok && url.origin === self.location.origin) {
+        cache.put(req, net.clone());
+      }
+      return net;
+    } catch (err) {
+      // Scope-relative URL fallback
+      const relUrl = new URL(url.pathname.replace(BASE_PATH, ''), self.registration.scope).toString();
+      const relHit = await cache.match(relUrl);
+      if (relHit) return relHit;
+
+      return new Response('Offline - Asset not cached', {
+        status: 503,
+        statusText: 'Offline',
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+  })());
+});
+
+// ==============================================================================
+// BACKGROUND SYNC - DOWNLOAD QUEUE
+// ==============================================================================
+
+/**
+ * Encode path to base64 (same as encodePath in globals.js)
+ * Server expects paths to be base64 encoded
+ */
+function encodePath(str) {
+  const utf8 = new TextEncoder().encode(str);
+  let binary = '';
+  for (const byte of utf8) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Open IndexedDB from Service Worker context
+ */
+async function openDownloadDB() {
+  return new Promise((resolve, reject) => {
+    // MUST match version in db-core.js (currently 13)
+    const request = indexedDB.open('comics-now-offline', 13);
+
+    request.onsuccess = () => {
+      const database = request.result;
+      database.onversionchange = () => {
+        database.close();
+        console.log('[SW] IndexedDB connection closed due to version change request.');
+      };
+      resolve(database);
+    };
+
+    request.onblocked = () => {
+      console.warn('[SW] IndexedDB upgrade blocked by another connection.');
+      reject(new Error('SW IndexedDB blocked'));
+    };
+
+    request.onerror = () => {
+      console.error('[SW] IndexedDB open error:', request.error);
+      reject(request.error);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const database = event.target.result;
+      // Ensure basic stores exist if SW is the one upgrading
+      if (!database.objectStoreNames.contains('downloadQueue')) {
+        const queueStore = database.createObjectStore('downloadQueue', { keyPath: 'id' });
+        queueStore.createIndex('priority', 'priority', { unique: false });
+      }
+      if (!database.objectStoreNames.contains('settings')) {
+        database.createObjectStore('settings', { keyPath: 'key' });
+      }
+      if (!database.objectStoreNames.contains('comics')) {
+        const comicsStore = database.createObjectStore('comics', { keyPath: 'id' });
+        comicsStore.createIndex('userId', 'userId', { unique: false });
+      }
+    };
+  });
+}
+
+/**
+ * Get stored JWT token from IndexedDB
+ * @param {IDBDatabase} db - Database instance
+ * @returns {Promise<string|null>} JWT token or null
+ */
+async function getStoredJWT(db) {
+  return new Promise((resolve, reject) => {
+    try {
+      if (!db.objectStoreNames.contains('settings')) {
+        return resolve(null);
+      }
+      const tx = db.transaction(['settings'], 'readonly');
+      const store = tx.objectStore('settings');
+      const request = store.get('cf-jwt-token');
+
+      request.onsuccess = () => {
+        const result = request.result;
+        if (result && result.value) {
+          resolve(result.value);
+        } else {
+          resolve(null);
+        }
+      };
+
+      request.onerror = () => {
+        console.error('[SW] Error getting JWT token:', request.error);
+        resolve(null);
+      };
+    } catch (error) {
+      console.error('[SW] Exception in getStoredJWT:', error);
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * Get all queue items from IndexedDB
+ */
+async function getQueueItems(db) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['downloadQueue'], 'readonly');
+      const store = tx.objectStore('downloadQueue');
+      const index = store.index('priority');
+      const request = index.getAll();
+
+      request.onsuccess = () => {
+        const items = request.result || [];
+        resolve(items);
+      };
+
+      request.onerror = () => {
+        console.error('[SW] Error loading queue:', request.error);
+        reject(request.error);
+      };
+    } catch (error) {
+      console.error('[SW] Exception in getQueueItems:', error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Update a queue item in IndexedDB
+ */
+async function updateQueueItem(db, id, updates) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['downloadQueue'], 'readwrite');
+      const store = tx.objectStore('downloadQueue');
+      const getRequest = store.get(id);
+
+      getRequest.onsuccess = () => {
+        const item = getRequest.result;
+        if (!item) {
+          return resolve();
+        }
+
+        Object.assign(item, updates);
+        const putRequest = store.put(item);
+
+        putRequest.onsuccess = () => {
+          resolve();
+        };
+
+        putRequest.onerror = () => {
+          console.error('[SW] Error updating queue item:', putRequest.error);
+          reject(putRequest.error);
+        };
+      };
+
+      getRequest.onerror = () => {
+        console.error('[SW] Error getting queue item:', getRequest.error);
+        reject(getRequest.error);
+      };
+    } catch (error) {
+      console.error('[SW] Exception in updateQueueItem:', error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Remove a queue item from IndexedDB
+ */
+async function removeQueueItem(db, id) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['downloadQueue'], 'readwrite');
+      const store = tx.objectStore('downloadQueue');
+      const request = store.delete(id);
+
+      request.onsuccess = () => {
+        resolve();
+      };
+
+      request.onerror = () => {
+        console.error('[SW] Error removing queue item:', request.error);
+        reject(request.error);
+      };
+    } catch (error) {
+      console.error('[SW] Exception in removeQueueItem:', error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Save downloaded comic to IndexedDB
+ */
+async function saveComicBlob(db, comic, blob) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction(['comics'], 'readwrite');
+      const store = tx.objectStore('comics');
+
+      // Get userId from comic or use default
+      const userId = comic.userId || 'default-user';
+
+      const comicData = {
+        id: comic.id,
+        userId: userId,
+        comicInfo: comic,
+        fileBlob: blob,
+        downloadedAt: Date.now()
+      };
+
+      const request = store.put(comicData);
+
+      request.onsuccess = () => {
+        resolve();
+      };
+
+      request.onerror = () => {
+        console.error('[SW] Error saving comic:', request.error);
+        reject(request.error);
+      };
+    } catch (error) {
+      console.error('[SW] Exception in saveComicBlob:', error);
+      reject(error);
+    }
+  });
+}
+
+/**
+ * Download with progress tracking
+ */
+async function downloadWithProgress(response, onProgress) {
+  const total = parseInt(response.headers.get('Content-Length') || '0');
+  const reader = response.body.getReader();
+  let received = 0;
+  const chunks = [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    chunks.push(value);
+    received += value.length;
+
+    if (total && onProgress) {
+      onProgress(received / total);
+    }
+  }
+
+  return new Blob(chunks);
+}
+
+/**
+ * Send message to all clients
+ */
+async function notifyClients(message) {
+  try {
+    const clients = await self.clients.matchAll({ includeUncontrolled: true });
+
+    clients.forEach(client => {
+      try {
+        client.postMessage(message);
+      } catch (error) {
+        console.error('[SW] Error sending message to client:', error);
+      }
+    });
+  } catch (error) {
+    console.error('[SW] Error notifying clients:', error);
+  }
+}
+
+/**
+ * Show notification when downloads complete
+ */
+async function showCompletionNotification(completedCount) {
+  if (!self.registration.showNotification) {
+    return;
+  }
+
+  try {
+    await self.registration.showNotification('Comics Downloaded', {
+      body: `${completedCount} comic${completedCount > 1 ? 's' : ''} downloaded successfully`,
+      icon: `${BASE_PATH}icons/icon-192x192.png`,
+      badge: `${BASE_PATH}icons/icon-192x192.png`,
+      tag: 'download-complete',
+      requireInteraction: false,
+      data: { action: 'open-app' }
+    });
+
+  } catch (error) {
+    console.error('[SW] Error showing notification:', error);
+  }
+}
+
+let isProcessingQueue = false;
+
+/**
+ * Process download queue (Background Sync handler)
+ */
+async function processDownloadQueue() {
+  if (isProcessingQueue) return;
+  isProcessingQueue = true;
+
+  try {
+    let db;
+    try {
+      db = await openDownloadDB();
+    } catch (error) {
+      console.error('[SW] Failed to open IndexedDB:', error);
+      return;
+    }
+
+    let queue;
+    try {
+      queue = await getQueueItems(db);
+    } catch (error) {
+      console.error('[SW] Failed to load queue:', error);
+      return;
+    }
+
+    // Filter only pending items
+    const pendingItems = queue.filter(item => item.status === 'pending');
+
+    if (pendingItems.length === 0) {
+      return;
+    }
+
+    // Get Cloudflare Access JWT token
+    const jwtToken = await getStoredJWT(db);
+
+    let completedCount = 0;
+
+    for (const item of pendingItems) {
+      try {
+        // Re-verify item is still in queue and pending (to handle external cancellations)
+        const currentQueue = await getQueueItems(db);
+        const stillExists = currentQueue.find(i => i.id === item.id && i.status === 'pending');
+        if (!stillExists) continue;
+
+        // Update status to downloading
+        await updateQueueItem(db, item.id, { status: 'downloading', progress: 0 });
+
+        // Notify clients of status change
+        await notifyClients({
+          type: 'download-status',
+          comicId: item.id,
+          status: 'downloading'
+        });
+
+        // Construct download URL (path must be base64 encoded, then URI encoded)
+        const downloadUrl = `${self.location.origin}${BASE_PATH}api/v1/comics/download?path=${encodeURIComponent(encodePath(item.comicPath))}`;
+
+        // Download comic with authentication
+        const headers = {
+          'Cache-Control': 'no-cache'
+        };
+
+        // Add Cloudflare Access token if available
+        if (jwtToken) {
+          headers['cf-access-jwt-assertion'] = jwtToken;
+        }
+
+        let response;
+        try {
+          response = await fetch(downloadUrl, {
+            headers: headers,
+            credentials: 'include',
+            mode: 'cors',
+            cache: 'no-cache'
+          });
+        } catch (fetchError) {
+          console.error('[SW] Fetch error:', fetchError);
+          throw new Error(`Network error: ${fetchError.message}. Try downloading from library instead.`);
+        }
+
+
+        if (!response.ok) {
+          // Handle authentication errors specially
+          if (response.status === 401 || response.status === 403) {
+            throw new Error('Authentication expired - please reopen app and restart download');
+          }
+          throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+        }
+
+        // Download with progress tracking
+        const blob = await downloadWithProgress(response, async (progress) => {
+          await updateQueueItem(db, item.id, { progress });
+          await notifyClients({
+            type: 'download-progress',
+            comicId: item.id,
+            progress: progress
+          });
+        });
+
+        // Fetch guided view data to cache it
+        try {
+          const guidedViewUrl = `${self.location.origin}${BASE_PATH}api/v1/comics/${encodeURIComponent(item.comic.id)}/guided-view`;
+          const gvRes = await fetch(guidedViewUrl, { headers: headers, credentials: 'include' });
+          if (gvRes.ok) {
+            const cache = await caches.open(DOWNLOADS_CACHE_NAME);
+            await cache.put(guidedViewUrl, gvRes);
+          }
+        } catch (gvErr) {
+          console.error('[SW] Guided view fetch failed:', gvErr);
+        }
+
+        // Save to IndexedDB
+        await saveComicBlob(db, item.comic, blob);
+
+        // Mark complete and remove from queue after 3 seconds
+        await updateQueueItem(db, item.id, {
+          status: 'completed',
+          progress: 1
+        });
+
+        await notifyClients({
+          type: 'download-complete',
+          comicId: item.id
+        });
+
+        completedCount++;
+
+        // Remove from queue
+        setTimeout(async () => {
+          let db2;
+          try {
+            db2 = await openDownloadDB();
+            await removeQueueItem(db2, item.id);
+          } catch (error) {
+            console.error('[SW] Error removing completed item:', error);
+          } finally {
+            if (db2) {
+              db2.close();
+            }
+          }
+        }, 3000);
+
+      } catch (error) {
+        console.error('[SW] Download failed:', item.comicName, error);
+
+        try {
+          await updateQueueItem(db, item.id, {
+            status: 'error',
+            error: error.message || 'Download failed'
+          });
+
+          await notifyClients({
+            type: 'download-error',
+            comicId: item.id,
+            error: error.message
+          });
+        } catch (updateError) {
+          console.error('[SW] Error updating failed item:', updateError);
+        }
+      }
+    }
+
+    // Show notification if any completed
+    if (completedCount > 0) {
+      await showCompletionNotification(completedCount);
+    }
+  } finally {
+    isProcessingQueue = false;
+  }
+}
+
+// SYNC EVENT: Handle background sync for downloads
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'download-comics') {
+    event.waitUntil(processDownloadQueue());
+  }
+});
+
+// MESSAGE EVENT: Handle explicit download start commands
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'start-downloads') {
+    event.waitUntil(processDownloadQueue());
+  }
+});
+
+// NOTIFICATION CLICK: Handle notification interactions
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.notification.data?.action === 'open-app') {
+    event.waitUntil(
+      clients.openWindow(BASE_PATH || '/')
+    );
+  }
+});
+
+// ==============================================================================
+// BACKGROUND FETCH API — true OS-level background downloads (Android Chrome)
+// ==============================================================================
+// Registration ids are `comic-<id>`; the fetched response is persisted to the
+// offline DB and the page is notified. Foreground resumable download remains the
+// fallback where Background Fetch is unavailable (iOS, etc.).
+
+function bgFetchComicId(registration) {
+  return registration.id.startsWith('comic-') ? registration.id.slice('comic-'.length) : registration.id;
+}
+
+self.addEventListener('backgroundfetchsuccess', (event) => {
+  const bgFetch = event.registration;
+  event.waitUntil((async () => {
+    let db = null;
+    try {
+      const records = await bgFetch.matchAll();
+      const comicId = bgFetchComicId(bgFetch);
+      try { db = await openDownloadDB(); } catch (e) { db = null; }
+
+      for (const record of records) {
+        try {
+          const response = await record.responseReady;
+          if (!response.ok) continue;
+          const blob = await response.blob();
+
+          if (db) {
+            const queue = await getQueueItems(db);
+            const item = queue.find(i => i.id === comicId);
+            const comic = (item && item.comic) || { id: comicId };
+            await saveComicBlob(db, comic, blob);
+            if (item) {
+              await updateQueueItem(db, item.id, {
+                status: 'completed',
+                progress: 1,
+                completedAt: Date.now(),
+                error: null
+              });
+            }
+            // Pre-cache guided-view data for offline reading.
+            try {
+              const gvUrl = `${self.location.origin}${BASE_PATH}api/v1/comics/${encodeURIComponent(comicId)}/guided-view`;
+              const gvRes = await fetch(gvUrl, { credentials: 'include' });
+              if (gvRes.ok) {
+                const cache = await caches.open(DOWNLOADS_CACHE_NAME);
+                await cache.put(gvUrl, gvRes);
+              }
+            } catch (_) {}
+          }
+
+          await notifyClients({ type: 'download-complete', comicId });
+        } catch (recErr) {
+          console.error('[SW] Background fetch record error:', recErr);
+        }
+      }
+
+      if (typeof event.updateUI === 'function') {
+        try { await event.updateUI({ title: 'Download complete' }); } catch (_) {}
+      }
+      await showCompletionNotification(1);
+    } catch (err) {
+      console.error('[SW] backgroundfetchsuccess error:', err);
+    } finally {
+      if (db && db.close) db.close();
+    }
+  })());
+});
+
+self.addEventListener('backgroundfetchfail', (event) => {
+  const bgFetch = event.registration;
+  event.waitUntil((async () => {
+    const comicId = bgFetchComicId(bgFetch);
+    try {
+      const db = await openDownloadDB();
+      await updateQueueItem(db, comicId, {
+        status: 'error',
+        error: 'Background download failed',
+        failedAt: Date.now()
+      });
+      if (db.close) db.close();
+    } catch (_) {}
+    await notifyClients({ type: 'download-error', comicId, error: 'Background download failed' });
+  })());
+});
+
+self.addEventListener('backgroundfetchabort', (event) => {
+  const bgFetch = event.registration;
+  event.waitUntil((async () => {
+    const comicId = bgFetchComicId(bgFetch);
+    // Abort == pause: mark the item paused (update-only, so a client-side cancel
+    // that already removed the row is a no-op). The page decides pause vs cancel.
+    try {
+      const db = await openDownloadDB();
+      await updateQueueItem(db, comicId, { status: 'paused' });
+      if (db.close) db.close();
+    } catch (_) {}
+    await notifyClients({ type: 'download-aborted', comicId });
+  })());
+});
+
+self.addEventListener('backgroundfetchclick', (event) => {
+  event.waitUntil(clients.openWindow(BASE_PATH || '/'));
+});

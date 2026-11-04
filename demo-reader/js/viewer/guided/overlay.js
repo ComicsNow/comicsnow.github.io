@@ -1,0 +1,410 @@
+// ARCHITECTURAL_EXEMPTION: Integrated SVG panel mask and Bézier path renderer
+/**
+ * Guided View Overlay & Rendering Engine
+ * 
+ * Handles all DOM manipulation, CSS transforms, and UI state updates for 
+ * Guided View modes. Designed to be "pure" where possible, driven by 
+ * parameters rather than reading global state directly.
+ */
+import { state, clearElement } from '../../globals.js';
+import { html, raw, render } from '../../ui/template.js';
+
+const clear = typeof clearElement === 'function' ? clearElement : (el) => { if (el) { if (typeof el.replaceChildren === 'function') el.replaceChildren(); else el.innerHTML = ''; } };
+const renderContent = (typeof render === 'function' && render.length >= 2) ? render : (el, content) => {
+  if (!el) return;
+  const toStr = (c) => {
+    if (c === null || c === undefined) return '';
+    if (Array.isArray(c)) return c.map(toStr).join('');
+    if (typeof c === 'object' && typeof c.toHTML === 'function') return c.toHTML();
+    if (typeof c === 'object' && c.__isRawHtml) return c.html;
+    return String(c);
+  };
+  el.innerHTML = toStr(content);
+};
+const safeRaw = (typeof raw !== 'undefined' && typeof raw === 'function' && raw.length > 0) ? raw : (v) => ({ __isRawHtml: true, html: String(v ?? '') });
+
+const SPEECH_BUBBLE_ICON_HTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>`;
+const GUIDE_ICON_HTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="7" r="2"></circle><path d="M9 9v7"></path><path d="M6 12l3-2 3 2"></path><path d="M7 21l2-5 2 5"></path><line x1="13" y1="3" x2="13" y2="21"></line><path d="M13 4l7 3-7 3"></path></svg>`;
+const SQUARE_ICON_HTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>`;
+
+function getStage() { return document.getElementById('fullscreen-viewer'); }
+function getImg() { return document.getElementById('fullscreen-image'); }
+
+/**
+ * Updates the main image transform for Manga/Sequential pan-zoom.
+ * If targetBox is null, resets to "Full-page view" (contain) if isManga is true,
+ * otherwise clears the transform.
+ */
+export function applyTransform(targetBox, isManga) {
+  const stage = getStage();
+  const img = getImg();
+  if (!stage || !img) return;
+
+  if (!img.naturalWidth || !img.naturalHeight) {
+    img.addEventListener('load', () => applyTransform(targetBox, isManga), { once: true });
+    return;
+  }
+
+  const stageW = stage.clientWidth;
+  const stageH = stage.clientHeight;
+  if (!stageW || !stageH) return;
+
+  if (!targetBox) {
+    if (isManga) {
+      // Full-page view: contain the whole image inside the stage, centered.
+      const s = Math.min(stageW / img.naturalWidth, stageH / img.naturalHeight);
+      const tx = (stageW - img.naturalWidth * s) / 2;
+      const ty = (stageH - img.naturalHeight * s) / 2;
+      img.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+    } else {
+      // RESET: Ensure transform is cleared if we are not in Manga mode or disabling
+      img.style.transform = '';
+    }
+    return;
+  }
+
+  let px, py, pw, ph;
+  if (Array.isArray(targetBox)) {
+    [px, py, pw, ph] = targetBox;
+  } else if (targetBox && typeof targetBox === 'object') {
+    px = targetBox[0] !== undefined ? targetBox[0] : targetBox['0'];
+    py = targetBox[1] !== undefined ? targetBox[1] : targetBox['1'];
+    pw = targetBox[2] !== undefined ? targetBox[2] : targetBox['2'];
+    ph = targetBox[3] !== undefined ? targetBox[3] : targetBox['3'];
+  }
+  if (pw <= 0) pw = img.naturalWidth;
+  if (ph <= 0) ph = img.naturalHeight;
+
+  const margin = 0.02;
+  const targetW = stageW * (1 - margin * 2);
+  const targetH = stageH * (1 - margin * 2);
+  
+  const baseScale = Math.min(stageW / img.naturalWidth, stageH / img.naturalHeight);
+  let s = Math.min(targetW / pw, targetH / ph);
+  // Ensure full width panels and panels in general are visibly zoomed in compared to full page
+  const minPanelZoom = baseScale * 1.35;
+  if (s < minPanelZoom && pw > img.naturalWidth * 0.6) {
+    s = minPanelZoom;
+  }
+  if (s > 4.0) s = 4.0;
+
+  const cx = px + pw / 2;
+  const cy = py + ph / 2;
+  const tx = stageW / 2 - cx * s;
+  const ty = stageH / 2 - cy * s;
+  img.style.transform = `translate(${tx}px, ${ty}px) scale(${s})`;
+}
+
+/**
+ * Renders the "magnifier" overlay for Bubble Zoom, Hot Zoom, and Western sequential.
+ * targetBox: [x, y, w, h] in natural image coords.
+ * isPanelZoom: boolean, if true fits box to overlay (Manga style), else fixed magnification.
+ */
+export function applyBubbleOverlay(targetBox, isPanelZoom) {
+  const stage = getStage();
+  const img = getImg();
+  if (!stage || !img) return;
+  
+  if (!img.naturalWidth || !img.naturalHeight) {
+    img.addEventListener('load', () => applyBubbleOverlay(targetBox, isPanelZoom), { once: true });
+    return;
+  }
+  
+  let overlay = document.getElementById('bubble-magnifier-overlay');
+
+  if (!targetBox) {
+    if (overlay) {
+      overlay.style.opacity = '0';
+      clearTimeout(overlay._hideTimer);
+      overlay._hideTimer = setTimeout(() => {
+        if (overlay.style.opacity === '0') overlay.style.display = 'none';
+      }, 520);
+    }
+    return;
+  }
+
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'bubble-magnifier-overlay';
+    overlay.style.position = 'absolute';
+    overlay.style.pointerEvents = 'auto';
+    overlay.style.touchAction = 'none';
+    overlay.style.userSelect = 'none';
+    overlay.style.zIndex = '100';
+    overlay.style.borderRadius = '16px';
+    overlay.style.boxShadow = '0 15px 50px rgba(0,0,0,0.9), 0 0 0 2px rgba(255,255,255,0.1)';
+    overlay.style.overflow = 'hidden';
+    overlay.style.willChange = 'transform, width, height, opacity';
+    overlay.style.transition =
+      'transform 600ms cubic-bezier(0.22, 1, 0.36, 1), ' +
+      'width 500ms cubic-bezier(0.22, 1, 0.36, 1), ' +
+      'height 500ms cubic-bezier(0.22, 1, 0.36, 1), ' +
+      'opacity 400ms ease';
+    overlay.style.backgroundColor = '#000';
+
+    const innerImg = document.createElement('img');
+    innerImg.id = 'bubble-magnifier-img';
+    innerImg.style.position = 'absolute';
+    innerImg.style.transformOrigin = '0 0';
+    innerImg.style.maxWidth = 'none';
+    innerImg.style.maxHeight = 'none';
+    innerImg.style.willChange = 'transform';
+    innerImg.style.transition = 'transform 600ms cubic-bezier(0.22, 1, 0.36, 1)';
+    overlay.appendChild(innerImg);
+    stage.appendChild(overlay);
+  }
+
+  clearTimeout(overlay._hideTimer);
+  overlay.style.display = 'block';
+  overlay.style.opacity = '1';
+  overlay.style.zIndex = '100';
+
+  const innerImg = document.getElementById('bubble-magnifier-img');
+  innerImg.src = img.src;
+
+  let px, py, pw, ph;
+  if (Array.isArray(targetBox)) {
+    [px, py, pw, ph] = targetBox;
+  } else if (targetBox && typeof targetBox === 'object') {
+    px = targetBox[0] !== undefined ? targetBox[0] : targetBox['0'];
+    py = targetBox[1] !== undefined ? targetBox[1] : targetBox['1'];
+    pw = targetBox[2] !== undefined ? targetBox[2] : targetBox['2'];
+    ph = targetBox[3] !== undefined ? targetBox[3] : targetBox['3'];
+  }
+
+  const registry = state.GuidedView.ModeRegistry;
+  const isManual = !!registry.getManualOverrideBox();
+  const comic = state.currentComic || (typeof window !== 'undefined' && window.currentComic);
+  const isManga = !!(comic && comic.mangaMode);
+
+  // Western speech bubbles: expand the source box outward by 4% horizontally and 3% vertically
+  // so dialogue edges, italics, quotes, and punctuation are never shaved by tight AI detector boxes.
+  if (!isPanelZoom && !isManual && !isManga && pw > 0 && ph > 0) {
+    const expandX = pw * 0.04;
+    const expandY = ph * 0.03;
+    px = Math.max(0, px - expandX);
+    py = Math.max(0, py - expandY);
+    pw = pw + expandX * 2;
+    ph = ph + expandY * 2;
+  }
+
+  const cx = px + pw / 2;
+  const cy = py + ph / 2;
+
+  const stageW = stage.clientWidth;
+  const stageH = stage.clientHeight;
+
+  const baseScale = Math.min(stageW / img.naturalWidth, stageH / img.naturalHeight);
+  const renderedH = img.naturalHeight * baseScale;
+  const imgTop = (stageH - renderedH) / 2;
+  const bubbleStageCy = imgTop + (cy * baseScale);
+  
+  let overlayW, overlayH, innerScale, targetX, targetY, overlayScale;
+  if (isPanelZoom) {
+    // A) More zoomed in on panels
+    // B) More zoomed in on full-width panels
+    const maxPanelW = Math.min(stageW - 12, 1200);
+    const maxPanelH = Math.min(stageH * 0.88, 1400);
+    const pad = 12;
+
+    const fitScaleW = (maxPanelW - pad * 2) / pw;
+    const fitScaleH = (maxPanelH - pad * 2) / ph;
+    const fitScale = Math.min(fitScaleW, fitScaleH);
+
+    // Boost zoom: for panels, ensure at least 1.35x baseScale (or higher if fitScale allows).
+    // Full-width panels previously had fitScale <= baseScale (zero zoom).
+    const minZoomMultiplier = 1.35;
+    let targetScale = Math.max(fitScale, baseScale * minZoomMultiplier);
+    targetScale = Math.min(targetScale, baseScale * 4.0);
+    if (ph * targetScale > maxPanelH * 1.25) {
+      targetScale = Math.max(baseScale, maxPanelH / ph);
+    }
+    innerScale = targetScale;
+
+    // Adapt overlay dimensions to the actual rendered panel dimensions, avoiding giant black voids
+    overlayW = Math.min(maxPanelW, Math.round(pw * innerScale + pad * 2));
+    overlayH = Math.min(maxPanelH, Math.round(ph * innerScale + pad * 2));
+    const minPanelW = Math.min(280, maxPanelW);
+    const minPanelH = 160;
+    overlayW = Math.max(overlayW, minPanelW);
+    overlayH = Math.max(overlayH, minPanelH);
+
+    targetX = Math.max(6, Math.min(stageW - overlayW - 6, (stageW - overlayW) / 2));
+    targetY = Math.max(50, Math.min(stageH - overlayH - 80, (stageH - overlayH) / 2));
+    overlayScale = 1;
+  } else {
+    // C) More zoomed in on speech bubbles
+    // D) Zoomed in on full width bubbles and not cutting off text
+    const maxBubbleW = Math.min(stageW - 12, 700);
+    const maxBubbleH = Math.min(stageH * 0.52, 420);
+    const padX = 20;
+    const padY = 16;
+    const minBubbleW = Math.min(260, maxBubbleW);
+    const minBubbleH = 140;
+
+    // Increased target magnification (3.2x vs 2.5x previously)
+    const targetMag = 3.2;
+    const desiredScale = baseScale * targetMag;
+
+    // Calculate maximum fit scale inside overlay bounds to guarantee text is NEVER cut off
+    const maxFitX = (maxBubbleW - padX * 2) / pw;
+    const maxFitY = (maxBubbleH - padY * 2) / ph;
+    const maxFit = Math.min(maxFitX, maxFitY);
+
+    // Zoom in as much as possible up to desiredScale, safely capped by maxFit
+    innerScale = Math.min(desiredScale, maxFit);
+
+    // Ensure overlay accommodates the bubble width and height with padding
+    overlayW = Math.min(maxBubbleW, Math.max(minBubbleW, Math.round(pw * innerScale + padX * 2)));
+    overlayH = Math.min(maxBubbleH, Math.max(minBubbleH, Math.round(ph * innerScale + padY * 2)));
+
+    targetX = Math.max(6, Math.min(stageW - overlayW - 6, (stageW - overlayW) / 2));
+    
+    // STABILIZATION: Use a more stable positioning logic to prevent jumpiness.
+    // Instead of a hard flip at center, we use a 20% deadzone.
+    const deadzone = stageH * 0.1;
+    const mid = stageH / 2;
+    
+    if (typeof overlay._lastYPos === 'undefined') {
+      overlay._lastYPos = bubbleStageCy < mid ? 'bottom' : 'top';
+    }
+
+    if (overlay._lastYPos === 'bottom') {
+      if (bubbleStageCy > mid + deadzone) overlay._lastYPos = 'top';
+    } else {
+      if (bubbleStageCy < mid - deadzone) overlay._lastYPos = 'bottom';
+    }
+
+    if (overlay._lastYPos === 'top') {
+      targetY = 60;
+    } else {
+      targetY = stageH - overlayH - 100;
+    }
+    targetY = Math.max(10, Math.min(stageH - overlayH - 10, targetY));
+
+    overlayScale = 1;
+  }
+
+  overlay.style.width = `${Math.round(overlayW)}px`;
+  overlay.style.height = `${Math.round(overlayH)}px`;
+  overlay.style.left = '0px';
+  overlay.style.top = '0px';
+  overlay.style.transform = `translate(${Math.round(targetX)}px, ${Math.round(targetY)}px) scale(${overlayScale})`;
+
+  const innerTx = (overlayW / 2) - (cx * innerScale);
+  const innerTy = (overlayH / 2) - (cy * innerScale);
+  
+  innerImg.style.width = `${img.naturalWidth}px`;
+  innerImg.style.height = `${img.naturalHeight}px`;
+  innerImg.style.left = '0px';
+  innerImg.style.top = '0px';
+  innerImg.style.transition = isManual ? 'none' : 'transform 600ms cubic-bezier(0.22, 1, 0.36, 1)';
+  innerImg.style.transform = `translate(${Math.round(innerTx)}px, ${Math.round(innerTy)}px) scale(${innerScale})`;
+}
+
+export function applyClasses(needsGuidedLayout) {
+  const stage = getStage();
+  const img = getImg();
+
+  if (stage) stage.classList.toggle('guided-stage', !!needsGuidedLayout);
+  if (img) {
+    img.classList.toggle('guided-img', !!needsGuidedLayout);
+    if (needsGuidedLayout) {
+      img.classList.remove('orientation-landscape');
+    } else {
+      // FULL RESET: When disabling, clear all Guided-specific transforms and styles
+      img.style.transform = '';
+      const isLandscape = state.isLandscapeOrientation || window.isLandscapeOrientation;
+      if (isLandscape) {
+        img.classList.add('orientation-landscape');
+      } else {
+        img.classList.remove('orientation-landscape');
+      }
+    }
+  }
+}
+
+export function applyZoomCss(isActive) {
+  const stage = getStage();
+  if (!stage) return;
+  stage.classList.toggle('guided-zoom-no-touchmenu', !!isActive);
+}
+
+export function updateToggleUI(active) {
+  const btn = document.getElementById('manga-guided-toggle-btn');
+  if (!btn) return;
+  btn.classList.toggle('active', !!active);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  renderContent(btn, safeRaw(GUIDE_ICON_HTML));
+}
+
+export function updateBubbleToggleUI(active) {
+  const btn = document.getElementById('western-guided-toggle-btn');
+  if (!btn) return;
+  btn.classList.toggle('active', !!active);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+
+  const getIsDesktop = state.isDesktopDevice || window.isDesktopDevice;
+  const isDesktop = typeof getIsDesktop === 'function' && getIsDesktop();
+  if (isDesktop) {
+    btn.title = "Guided View across comic dialogue";
+  }
+  renderContent(btn, safeRaw(GUIDE_ICON_HTML));
+}
+
+export function updateWesternSpeechZoomUI(active) {
+  const btn = document.getElementById('western-speech-zoom');
+  if (!btn) return;
+  btn.classList.toggle('active', !!active);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  
+  const getIsDesktop = state.isDesktopDevice || window.isDesktopDevice;
+  const isDesktop = typeof getIsDesktop === 'function' && getIsDesktop();
+  if (isDesktop) {
+    btn.title = "User initiated dialog zoom";
+  }
+  renderContent(btn, safeRaw(SPEECH_BUBBLE_ICON_HTML));
+}
+
+export function updateMangaPanelZoomUI(active) {
+  const btn = document.getElementById('manga-panel-zoom');
+  if (!btn) return;
+  btn.classList.toggle('active', !!active);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  renderContent(btn, safeRaw(SQUARE_ICON_HTML));
+}
+
+export function updateMangaSpeechZoomUI(active) {
+  const btn = document.getElementById('manga-speech-zoom-btn');
+  if (!btn) return;
+  btn.classList.toggle('active', !!active);
+  btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  renderContent(btn, safeRaw(SPEECH_BUBBLE_ICON_HTML));
+}
+
+// Attach to state.GuidedView and window.GuidedView
+Object.assign(state.GuidedView, {
+  applyTransform,
+  applyBubbleOverlay,
+  applyClasses,
+  applyZoomCss,
+  updateToggleUI,
+  updateBubbleToggleUI,
+  updateWesternSpeechZoomUI,
+  updateMangaPanelZoomUI,
+  updateMangaSpeechZoomUI
+});
+
+if (typeof window !== 'undefined' && window.GuidedView && window.GuidedView !== state.GuidedView) {
+  Object.assign(window.GuidedView, {
+    applyTransform,
+    applyBubbleOverlay,
+    applyClasses,
+    applyZoomCss,
+    updateToggleUI,
+    updateBubbleToggleUI,
+    updateWesternSpeechZoomUI,
+    updateMangaPanelZoomUI,
+    updateMangaSpeechZoomUI
+  });
+}
