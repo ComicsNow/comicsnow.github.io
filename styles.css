@@ -30,9 +30,10 @@ body {
   background-color: var(--bg-deep);
   background-image:
     radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 0),
-    linear-gradient(180deg, rgba(13, 14, 18, 0.86) 0%, rgba(13, 14, 18, 0.96) 100%),
     url('assets/background.png');
-  background-size: 18px 18px, cover, cover;
+  background-size: 18px 18px, cover;
+  background-position: center;
+  background-repeat: repeat, no-repeat;
   background-attachment: fixed;
   color: var(--text-main);
   font-family: var(--font-sans);
