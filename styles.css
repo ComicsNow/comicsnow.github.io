@@ -217,6 +217,14 @@ body {
   position: relative;
 }
 
+.hero-support { margin-block-end: 1.15rem; }
+
+.hero-support .btn {
+  padding: 0.6rem 1rem;
+  font-size: 0.75rem;
+  box-shadow: none;
+}
+
 .eyebrow-badges {
   display: flex;
   flex-wrap: wrap;
@@ -1067,7 +1075,7 @@ body {
   .nav-cta-group {
     flex: 1 1 100%;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.5rem;
   }
 
