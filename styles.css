@@ -686,6 +686,8 @@ body {
   color: var(--text-muted);
 }
 
+.site-footer p + p { margin-block-start: 0.5rem; }
+
 /* Full-Page Live Demo Launchpad */
 .demo-launchpad {
   background: var(--bg-elevated);
