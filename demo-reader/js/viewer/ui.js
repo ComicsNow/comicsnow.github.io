@@ -73,6 +73,20 @@ const global = typeof canonicalGlobal !== 'undefined' ? canonicalGlobal : new Pr
     }
 
     const current = Math.min(totalPages, Math.max(1, global.currentPageIndex + 1));
+    if (window.currentComic && window.currentComic.id != null) {
+      window.cnTrack?.('reader-page-turn', {
+        comic_id: window.currentComic.id,
+        page: current,
+        total: totalPages,
+        pct: Math.round((current / totalPages) * 100)
+      });
+      if (current >= totalPages) {
+        window.cnTrack?.('reader-comic-complete', {
+          comic_id: window.currentComic.id,
+          total: totalPages
+        });
+      }
+    }
     const text = `${current} / ${totalPages}`;
     const ariaLabel = `Current page ${current} of ${totalPages}. Activate to jump to a specific page.`;
 

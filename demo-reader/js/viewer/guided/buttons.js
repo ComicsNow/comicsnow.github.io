@@ -12,6 +12,11 @@ export function bindToggleButton() {
       if (!comic || comic.guidedViewStatus !== 'completed' || !state.GuidedView.isFullscreenOpen()) return;
       const willActivate = registry.getActiveModeName() !== 'guided';
       if (willActivate) await state.GuidedView.enable(); else state.GuidedView.disable();
+      window.cnTrack?.('reader-guided-toggle', {
+        mode: 'guided',
+        action: willActivate ? 'on' : 'off',
+        comic_id: comic.id
+      });
     });
   }
 
@@ -24,6 +29,11 @@ export function bindToggleButton() {
       if (!comic || comic.guidedViewStatus !== 'completed' || !!comic.mangaMode || !state.GuidedView.isFullscreenOpen()) return;
       const willActivate = registry.getActiveModeName() !== 'bubble';
       if (willActivate) await state.GuidedView.enableBubble(); else state.GuidedView.disableBubble();
+      window.cnTrack?.('reader-guided-toggle', {
+        mode: 'bubble',
+        action: willActivate ? 'on' : 'off',
+        comic_id: comic.id
+      });
     });
   }
 
@@ -36,6 +46,11 @@ export function bindToggleButton() {
       if (!comic || comic.guidedViewStatus !== 'completed' || !comic.mangaMode || !state.GuidedView.isFullscreenOpen()) return;
       const willActivate = registry.getActiveModeName() !== 'manga-speech-zoom';
       if (willActivate) await state.GuidedView.enableMangaSpeechZoom(); else state.GuidedView.disableMangaSpeechZoom();
+      window.cnTrack?.('reader-guided-toggle', {
+        mode: 'manga-speech-zoom',
+        action: willActivate ? 'on' : 'off',
+        comic_id: comic.id
+      });
     });
   }
 
@@ -48,6 +63,11 @@ export function bindToggleButton() {
       if (!comic || comic.guidedViewStatus !== 'completed' || !!comic.mangaMode || !state.GuidedView.isFullscreenOpen()) return;
       const willActivate = registry.getActiveModeName() !== 'western-speech-zoom';
       if (willActivate) await state.GuidedView.enableWesternSpeechZoom(); else state.GuidedView.disableWesternSpeechZoom();
+      window.cnTrack?.('reader-guided-toggle', {
+        mode: 'western-speech-zoom',
+        action: willActivate ? 'on' : 'off',
+        comic_id: comic.id
+      });
     });
   }
 
@@ -60,6 +80,11 @@ export function bindToggleButton() {
       if (!comic || comic.guidedViewStatus !== 'completed' || !comic.mangaMode || !state.GuidedView.isFullscreenOpen()) return;
       const willActivate = registry.getActiveModeName() !== 'manga-panel-zoom';
       if (willActivate) await state.GuidedView.enableMangaPanelZoom(); else state.GuidedView.disableMangaPanelZoom();
+      window.cnTrack?.('reader-guided-toggle', {
+        mode: 'manga-panel-zoom',
+        action: willActivate ? 'on' : 'off',
+        comic_id: comic.id
+      });
     });
   }
 }

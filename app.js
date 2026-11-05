@@ -65,14 +65,230 @@
       'npm install -g comics-now'
   };
 
+  function cleanEventData(data) {
+    var clean = {};
+    if (!data) return clean;
+    Object.keys(data).forEach(function (key) {
+      var value = data[key];
+      if (typeof value === 'string') {
+        clean[key] = value.slice(0, 120);
+      } else if (typeof value === 'number' && isFinite(value)) {
+        clean[key] = value;
+      } else if (typeof value === 'boolean') {
+        clean[key] = value;
+      }
+    });
+    return clean;
+  }
+
   function track(name, data) {
+    var payload = cleanEventData(data);
+    try {
+      if (window.localStorage && window.localStorage.getItem('cn_analytics_debug') === '1') {
+        var events = window.__cnEvents || (window.__cnEvents = []);
+        events.push({ name: name, data: payload, ts: Date.now() });
+        if (events.length > 200) events.splice(0, events.length - 200);
+      }
+    } catch (_error) {
+      // Debug mirror must never break the page.
+    }
     if (window.umami && typeof window.umami.track === 'function') {
       try {
-        window.umami.track(name, data || {});
+        var result = window.umami.track(name, payload);
+        if (result && typeof result.catch === 'function') result.catch(function () {});
       } catch (_error) {
         // Analytics should never break the page.
       }
     }
+  }
+  window.cnTrack = track;
+
+  var analyticsState = {
+    startedAt: Date.now(),
+    maxScroll: 0,
+    sections: {},
+    faqOpens: 0,
+    demoLaunches: 0,
+    outboundClicks: 0,
+    copies: 0,
+    exitSent: false
+  };
+
+  function sectionName(node) {
+    if (!node) return 'page';
+    if (node.tagName === 'HEADER') return 'nav';
+    if (node.tagName === 'FOOTER') return 'footer';
+    if (node.id === 'top') return 'hero';
+    if (node.id) return node.id;
+    if (node.classList && node.classList.contains('install')) return 'install';
+    return 'page';
+  }
+
+  function linkContext(link) {
+    var node = link.closest ? link.closest('section[id], section, header, footer') : null;
+    return sectionName(node);
+  }
+
+  function demoSource(link) {
+    var node = link.closest ? link.closest('section[id], section, header, footer') : null;
+    var name = sectionName(node);
+    if (name === 'hero') return 'hero';
+    if (name === 'demo') return 'contents';
+    if (name === 'companion') return 'companion';
+    return name === 'nav' ? 'nav' : 'other';
+  }
+
+  function activeInstallTab() {
+    var active = document.querySelector('[data-install-tab][aria-selected="true"]');
+    return active ? active.getAttribute('data-install-tab') : 'compose';
+  }
+
+  function initAnalytics() {
+    var seenSections = {};
+    var seenDepth = {};
+
+    document.addEventListener(
+      'click',
+      function (event) {
+        var link = event.target && event.target.closest ? event.target.closest('a[href]') : null;
+        if (!link) return;
+
+        var rawHref = link.getAttribute('href') || '';
+        var url;
+        try {
+          url = new URL(link.href, window.location.href);
+        } catch (_error) {
+          return;
+        }
+
+        var app = null;
+        if (url.pathname.indexOf('/demo-reader/') !== -1) app = 'reader';
+        else if (url.pathname.indexOf('/demo-gve/') !== -1) app = 'gve';
+
+        if (app) {
+          var mode = url.searchParams.get('mode') || (app === 'gve' ? 'editor' : 'default');
+          if (!/^[a-z0-9-]{1,32}$/.test(mode)) mode = 'default';
+          var source = demoSource(link);
+          var modified = event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
+          if (!modified) {
+            try {
+              window.sessionStorage.setItem(
+                'cn_entry',
+                JSON.stringify({
+                  v: 1,
+                  app: app,
+                  mode: mode,
+                  source: source,
+                  from: 'landing',
+                  ts: Date.now()
+                })
+              );
+            } catch (_error) {
+              // Attribution marker is optional.
+            }
+          }
+          analyticsState.demoLaunches++;
+          track('demo-launch', {
+            app: app,
+            mode: mode,
+            source: source,
+            cta: link.getAttribute('data-umami-event') || ''
+          });
+          return;
+        }
+
+        if (rawHref.charAt(0) === '#') {
+          track('section-nav', { section: rawHref.slice(1) || 'top' });
+          return;
+        }
+
+        if (
+          (url.protocol === 'http:' || url.protocol === 'https:') &&
+          url.origin !== window.location.origin
+        ) {
+          analyticsState.outboundClicks++;
+          track('outbound-click', {
+            host: url.hostname,
+            path: url.pathname,
+            source: linkContext(link)
+          });
+        }
+      },
+      true
+    );
+
+    Array.prototype.slice
+      .call(document.querySelectorAll('details.faq-item'))
+      .forEach(function (item, index) {
+        item.addEventListener('toggle', function () {
+          if (item.open) analyticsState.faqOpens++;
+          track('faq-toggle', { index: index + 1, open: !!item.open });
+        });
+      });
+
+    var sectionNodes = document.querySelectorAll(
+      '#top, .install, #demo, #companion, #features, #comparison, #faq'
+    );
+    if ('IntersectionObserver' in window) {
+      var observer = new IntersectionObserver(
+        function (entries) {
+          entries.forEach(function (entry) {
+            if (!entry.isIntersecting) return;
+            var name = sectionName(entry.target);
+            if (seenSections[name]) return;
+            seenSections[name] = true;
+            analyticsState.sections[name] = true;
+            track('section-view', { section: name });
+          });
+        },
+        { threshold: 0.25 }
+      );
+      Array.prototype.slice.call(sectionNodes).forEach(function (node) {
+        observer.observe(node);
+      });
+    }
+
+    function measureScroll() {
+      var doc = document.documentElement;
+      var scrollable = doc.scrollHeight - window.innerHeight;
+      var percent = scrollable > 0 ? Math.round((window.scrollY / scrollable) * 100) : 100;
+      if (percent > analyticsState.maxScroll) analyticsState.maxScroll = percent;
+      [25, 50, 75, 100].forEach(function (threshold) {
+        if (percent >= threshold && !seenDepth[threshold]) {
+          seenDepth[threshold] = true;
+          track('scroll-depth', { percent: threshold });
+        }
+      });
+    }
+
+    var scrollTick = false;
+    window.addEventListener(
+      'scroll',
+      function () {
+        if (scrollTick) return;
+        scrollTick = true;
+        window.requestAnimationFrame(function () {
+          scrollTick = false;
+          measureScroll();
+        });
+      },
+      { passive: true }
+    );
+    measureScroll();
+
+    window.addEventListener('pagehide', function () {
+      if (analyticsState.exitSent) return;
+      analyticsState.exitSent = true;
+      track('landing-exit', {
+        dwell_s: Math.round((Date.now() - analyticsState.startedAt) / 1000),
+        max_scroll: analyticsState.maxScroll,
+        sections_viewed: Object.keys(analyticsState.sections).length,
+        faq_opens: analyticsState.faqOpens,
+        demo_launches: analyticsState.demoLaunches,
+        outbound_clicks: analyticsState.outboundClicks,
+        copies: analyticsState.copies
+      });
+    });
   }
 
   function legacyCopy(text) {
@@ -142,7 +358,7 @@
     lens.appendChild(lensImage);
     lens.addEventListener('click', function (event) {
       event.stopPropagation();
-      zoomOut();
+      zoomOut('lens');
     });
 
     stage.appendChild(layer);
@@ -367,10 +583,15 @@
       focusWithoutScroll(lens);
     }
 
-    function zoomOut() {
+    function zoomOut(method) {
       if (activeIndex === -1) return;
 
       var index = activeIndex;
+      track('demo-zoom-close', {
+        kind: isPanelZoom ? 'panels' : 'bubbles',
+        method: method || 'control',
+        item: index + 1
+      });
       activeIndex = -1;
       stage.classList.remove('is-zoomed');
       if (hint) hint.textContent = config.hint;
@@ -382,7 +603,7 @@
 
     function toggleZoom(index, button) {
       if (activeIndex === index) {
-        zoomOut();
+        zoomOut('toggle');
       } else {
         zoomTo(index, button);
       }
@@ -409,7 +630,7 @@
       }
 
       if (index === -1) {
-        if (activeIndex !== -1) zoomOut();
+        if (activeIndex !== -1) zoomOut('background');
         return;
       }
       toggleZoom(index, buttons[index]);
@@ -418,7 +639,7 @@
     stage.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape' || activeIndex === -1) return;
       event.preventDefault();
-      zoomOut();
+      zoomOut('escape');
     });
 
     if (window.ResizeObserver) {
@@ -483,7 +704,9 @@
         if (!next) return;
         event.preventDefault();
         activate(next, true);
-        track('install-tab-switch', { tab: next.getAttribute('data-install-tab') });
+        var nextName = next.getAttribute('data-install-tab');
+        track('install-tab-' + nextName, { method: 'keyboard' });
+        track('install-tab-switch', { tab: nextName, method: 'keyboard' });
       });
     });
 
@@ -508,8 +731,14 @@
     copyBtn.addEventListener('click', function () {
       var text = code.textContent || '';
 
-      function copied() {
+      function report(result) {
+        analyticsState.copies++;
+        track('copy-install-command', { tab: activeInstallTab(), result: result });
+      }
+
+      function copied(result) {
         flashLabel('Copied');
+        report(result);
       }
 
       function selectIt() {
@@ -519,15 +748,21 @@
         selection.removeAllRanges();
         selection.addRange(range);
         flashLabel('Press Ctrl+C');
+        report('manual_select');
       }
 
       if (navigator.clipboard && window.isSecureContext) {
-        navigator.clipboard.writeText(text).then(copied, function () {
-          if (legacyCopy(text)) copied();
-          else selectIt();
-        });
+        navigator.clipboard.writeText(text).then(
+          function () {
+            copied('copied');
+          },
+          function () {
+            if (legacyCopy(text)) copied('legacy_copy');
+            else selectIt();
+          }
+        );
       } else if (legacyCopy(text)) {
-        copied();
+        copied('legacy_copy');
       } else {
         selectIt();
       }
@@ -535,6 +770,7 @@
   }
 
   function start() {
+    initAnalytics();
     initZoomDemos();
     initInstall();
   }

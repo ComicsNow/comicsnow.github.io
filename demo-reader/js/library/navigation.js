@@ -110,6 +110,11 @@ export function handleFilterClick(event) {
   }
   if (typeof window !== 'undefined') window.activeFilter = filter;
 
+  const currentSmartFilter = global.activeSmartFilter || null;
+  if (typeof window !== 'undefined') {
+    window.cnTrack?.('reader-filter', { filter: filter, smart: !!currentSmartFilter });
+  }
+
   if (filter === 'all') {
     if (typeof global.goToInitialView === 'function') {
       return global.goToInitialView();
@@ -119,8 +124,7 @@ export function handleFilterClick(event) {
   if (typeof global.updateFilterButtonCounts === 'function') {
     global.updateFilterButtonCounts();
   }
-  
-  const currentSmartFilter = global.activeSmartFilter || null;
+
   if (currentSmartFilter && typeof global._renderForActiveScope === 'function') {
     global._renderForActiveScope(currentSmartFilter);
   } else if (typeof global.applyFilterAndRender === 'function') {

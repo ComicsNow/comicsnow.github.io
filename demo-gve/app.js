@@ -1920,14 +1920,20 @@
           if (checked) state.selectedId = checked.value;
           const modeEl = el2.querySelector('input[name="import-mode"]:checked');
           if (modeEl) state.mode = modeEl.value;
-          if (!state.fileData || !state.selectedId) return;
+          const candidates = el2.querySelectorAll('input[name="candidate"]').length;
+          if (!state.fileData || !state.selectedId) {
+            if (window.cnTrack) window.cnTrack("gve-import-apply", { candidates: candidates, mode: state.mode, result: "invalid" });
+            return;
+          }
           status.textContent = "Applying\u2026";
           try {
             const res = await api2.applyImport(state.fileData, state.selectedId, state.mode);
             status.textContent = "";
             renderResult(res);
+            if (window.cnTrack) window.cnTrack("gve-import-apply", { candidates: candidates, mode: state.mode, result: "ok" });
           } catch (err) {
             status.textContent = `Apply failed: ${err.message}`;
+            if (window.cnTrack) window.cnTrack("gve-import-apply", { candidates: candidates, mode: state.mode, result: "error" });
           }
         }
         async function loadFile(data) {
@@ -2129,7 +2135,10 @@
   var session = null;
   var stage = null;
   var toastTimer = null;
+  var currentView = "none";
   function showView(name) {
+    var from = currentView;
+    currentView = name;
     el.library.hidden = name !== "library";
     el.import.hidden = name !== "import";
     el.settings.hidden = name !== "settings";
@@ -2137,6 +2146,7 @@
     el.navLibrary.classList.toggle("active", name === "library");
     el.navImport.classList.toggle("active", name === "import");
     el.navSettings.classList.toggle("active", name === "settings");
+    if (window.cnTrack) window.cnTrack("gve-view", { view: name, from: from });
   }
   function toast(message, kind = "info") {
     el.toast.textContent = message;
@@ -2200,6 +2210,7 @@
     pushSnapshot();
     const at = session.caret;
     const id = store.addItem(kind, box, at, points);
+    if (window.cnGveCount) window.cnGveCount("items_added");
     const page = store.getPage();
     const pruned = pruneWesternPanels(page, store.getType());
     if (pruned !== page) {
@@ -2226,6 +2237,7 @@
   }
   function setMode(mode) {
     if (!session) return;
+    if (window.cnGveCount) window.cnGveCount("mode_changes");
     session.mode = mode;
     stage.setMode(mode);
     for (const btn of el.toolbar.querySelectorAll(".mode-btn")) {
@@ -2329,6 +2341,7 @@
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "page-btn" + (name === store.getCurrentPage() ? " current" : "");
+      btn.dataset.pageIndex = String(index + 1);
       const page = store.getPage(name);
       const count = page ? page.items.length : 0;
       btn.textContent = `${index + 1}. ${name} (${count})`;
@@ -2342,6 +2355,7 @@
     stage.setView({ scale, offsetX: 12, offsetY: 12 });
   }
   function showPage(name) {
+    if (window.cnGveTouchPage) window.cnGveTouchPage(name);
     store.setCurrentPage(name);
     const page = store.getPage();
     stage.setImage(api.pageImageUrl(session.comicId, name));
@@ -2418,6 +2432,8 @@
         order: [...page.order]
       };
     }
+    let itemCount = 0;
+    for (const page of Object.values(pages)) itemCount += page.items.length;
     try {
       const res = await api.saveGuided(session.comicId, {
         comicId: store.getComicId(),
@@ -2427,19 +2443,40 @@
       store.markSaved();
       toast(`Saved. Backup: ${res.backupPath || "(none)"}`, "info");
       for (const warning of res.warnings || []) toast(warning, "warn");
+      if (window.cnTrack) {
+        window.cnTrack("gve-save", {
+          result: "ok",
+          pages: Object.keys(pages).length,
+          items: itemCount,
+          warnings: (res.warnings || []).length
+        });
+      }
     } catch (err) {
       toast(`Save failed: ${err.message}`, "error");
+      if (window.cnTrack) {
+        window.cnTrack("gve-save", {
+          result: "error",
+          pages: Object.keys(pages).length,
+          items: itemCount,
+          warnings: 0
+        });
+      }
     }
   }
   async function resetSidecar() {
     if (!session) return;
-    if (!window.confirm("Delete the guided-view sidecar for this comic? (a backup is kept)")) return;
+    if (!window.confirm("Delete the guided-view sidecar for this comic? (a backup is kept)")) {
+      if (window.cnTrack) window.cnTrack("gve-reset", { confirmed: false, result: "cancelled" });
+      return;
+    }
     try {
       await api.resetGuided(session.comicId);
       toast("Sidecar removed (backup kept).", "info");
-      await openComic(session.comicId);
+      if (window.cnTrack) window.cnTrack("gve-reset", { confirmed: true, result: "ok" });
+      await openComic(session.comicId, "reset");
     } catch (err) {
       toast(`Reset failed: ${err.message}`, "error");
+      if (window.cnTrack) window.cnTrack("gve-reset", { confirmed: true, result: "error" });
     }
   }
   function ensureStage() {
@@ -2464,7 +2501,7 @@
       if (session && page) fitView(page);
     });
   }
-  async function openComic(id) {
+  async function openComic(id, source) {
     try {
       const [doc, info] = await Promise.all([api.guided(id), api.getComic(id)]);
       ensureStage();
@@ -2485,8 +2522,26 @@
       if (doc.warnings && doc.warnings.length) {
         toast(`${doc.warnings.length} normalization warning(s) on load \u2014 first: ${doc.warnings[0]}`, "warn");
       }
+      if (window.cnTrack) {
+        window.cnTrack("gve-comic-open", {
+          comic_id: id,
+          source: source || "unknown",
+          pages: Object.keys(doc.pages).length,
+          type: doc.type || "unknown",
+          result: "ok"
+        });
+      }
     } catch (err) {
       toast(`Open failed: ${err.message}`, "error");
+      if (window.cnTrack) {
+        window.cnTrack("gve-comic-open", {
+          comic_id: id,
+          source: source || "unknown",
+          pages: 0,
+          type: "unknown",
+          result: "error"
+        });
+      }
     }
   }
   function confirmLeave() {
@@ -2495,10 +2550,10 @@
   function boot() {
     createLibraryView(el.library, {
       api,
-      onOpen: openComic,
+      onOpen: (id) => openComic(id, "library"),
       onExport: (id) => window.open(api.exportUrl(id), "_blank")
     });
-    createImportView(el.import, { api, onOpenEditor: openComic });
+    createImportView(el.import, { api, onOpenEditor: (id) => openComic(id, "import") });
     const settingsView = createSettingsView(el.settings, { api });
     el.navLibrary.addEventListener("click", () => {
       if (confirmLeave()) showView("library");
@@ -2544,14 +2599,15 @@
       }
     });
     showView("library");
-    openComic("526643c2796492c2c7ad1f59706129453670129e").then(() => {
+    openComic("526643c2796492c2c7ad1f59706129453670129e", "boot").then(() => {
       try { showPage("page_007.jpg"); } catch (_e) {}
+      if (window.cnGveReady) window.cnGveReady();
     });
     window.addEventListener("message", (event) => {
       const data = event.data;
       if (!data || data.target !== "gve-now-demo") return;
       if (data.comicId) {
-        openComic(data.comicId).then(() => {
+        openComic(data.comicId, "message").then(() => {
           if (data.page) {
             try { showPage(data.page); } catch (_e) {}
           }

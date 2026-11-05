@@ -1,6 +1,301 @@
 (function () {
   'use strict';
 
+  // ------------------------------------------------------------------
+  // Umami analytics: privacy-safe payloads, queued boot events, debug mirror
+  // ------------------------------------------------------------------
+  const analyticsState = {
+    startedAt: Date.now(),
+    saves: 0,
+    exports: 0,
+    resets: 0,
+    undo_count: 0,
+    redo_count: 0,
+    autosorts: 0,
+    items_added: 0,
+    comics_opened: 0,
+    mode_changes: 0,
+    pagesTouched: new Set()
+  };
+  const COUNTER_KEYS = new Set([
+    'saves',
+    'exports',
+    'resets',
+    'undo_count',
+    'redo_count',
+    'autosorts',
+    'items_added',
+    'comics_opened',
+    'mode_changes'
+  ]);
+  const analyticsQueue = [];
+  let pageviewSent = false;
+  let pageviewPending = false;
+  let entrySent = false;
+  let exitSent = false;
+  let entryMarker = null;
+  let markerLoaded = false;
+  let lastComicId = '';
+  let pendingDest = 'pagehide';
+  let pendingDestTimer = 0;
+
+  function sanitizeEventData(data) {
+    const clean = {};
+    if (!data) return clean;
+    Object.keys(data).forEach((key) => {
+      const value = data[key];
+      if (typeof value === 'string') clean[key] = value.slice(0, 120);
+      else if (typeof value === 'number' && isFinite(value)) clean[key] = value;
+      else if (typeof value === 'boolean') clean[key] = value;
+    });
+    return clean;
+  }
+
+  function safeToken(value, fallback) {
+    return typeof value === 'string' && /^[a-z0-9-]{1,24}$/.test(value) ? value : fallback;
+  }
+
+  function safeMode(value) {
+    return typeof value === 'string' && /^[a-z0-9-]{1,32}$/.test(value) ? value : 'unknown';
+  }
+
+  function mirrorEvent(name, data) {
+    try {
+      if (localStorage.getItem('cn_analytics_debug') === '1') {
+        const events = window.__cnEvents || (window.__cnEvents = []);
+        events.push({ name, data, ts: Date.now() });
+        if (events.length > 200) events.splice(0, events.length - 200);
+      }
+    } catch (_e) {}
+  }
+
+  function sendEvent(name, data) {
+    if (!window.umami || typeof window.umami.track !== 'function') return false;
+    try {
+      const result = window.umami.track(name, data);
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (_e) {}
+    return true;
+  }
+
+  function cnPageview() {
+    if (pageviewSent) return;
+    if (!window.umami || typeof window.umami.track !== 'function') {
+      pageviewPending = true;
+      return;
+    }
+    try {
+      // A no-argument track() is a pageview; a named call would be an event.
+      const result = window.umami.track();
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+      pageviewSent = true;
+    } catch (_e) {
+      pageviewPending = true;
+    }
+  }
+
+  function flushAnalytics() {
+    if (!window.umami || typeof window.umami.track !== 'function') return;
+    if (pageviewPending && !pageviewSent) {
+      pageviewPending = false;
+      cnPageview();
+    }
+    while (analyticsQueue.length) {
+      const event = analyticsQueue.shift();
+      sendEvent(event.name, event.data);
+    }
+  }
+
+  function cnTrack(name, data) {
+    const payload = sanitizeEventData(data);
+
+    if (name === 'gve-save' && payload.result === 'ok') analyticsState.saves += 1;
+    if (name === 'gve-export') analyticsState.exports += 1;
+    if (name === 'gve-reset' && payload.result === 'ok') analyticsState.resets += 1;
+    if (name === 'gve-comic-open' && payload.result === 'ok') {
+      analyticsState.comics_opened += 1;
+      if (payload.comic_id) lastComicId = String(payload.comic_id);
+    }
+
+    mirrorEvent(name, payload);
+    if (!sendEvent(name, payload)) analyticsQueue.push({ name, data: payload });
+  }
+  window.cnTrack = cnTrack;
+
+  window.cnGveCount = function (key) {
+    if (COUNTER_KEYS.has(key)) analyticsState[key] += 1;
+  };
+
+  window.cnGveTouchPage = function (name) {
+    if (name != null) analyticsState.pagesTouched.add(String(name).slice(0, 120));
+  };
+
+  function takeEntryMarker() {
+    if (markerLoaded) return entryMarker;
+    markerLoaded = true;
+    try {
+      const raw = sessionStorage.getItem('cn_entry');
+      sessionStorage.removeItem('cn_entry');
+      if (!raw) return null;
+      const marker = JSON.parse(raw);
+      if (!marker || marker.v !== 1 || marker.app !== 'gve') return null;
+      if (typeof marker.ts !== 'number' || !isFinite(marker.ts)) return null;
+      const age = Date.now() - marker.ts;
+      if (age < -60000 || age > 30 * 60 * 1000) return null;
+      entryMarker = marker;
+      return marker;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function writeEntryMarker(app, mode, source, from) {
+    try {
+      sessionStorage.setItem(
+        'cn_entry',
+        JSON.stringify({
+          v: 1,
+          app: app,
+          mode: safeMode(mode),
+          source: safeToken(source, 'direct'),
+          from: safeToken(from, 'landing'),
+          ts: Date.now()
+        })
+      );
+    } catch (_e) {}
+  }
+  window.cnWriteEntry = writeEntryMarker;
+
+  function currentViewName() {
+    const active = document.querySelector('.nav-btn.active');
+    if (active && active.id && active.id.indexOf('nav-') === 0) {
+      return safeToken(active.id.slice(4), 'editor');
+    }
+    return 'editor';
+  }
+
+  function cnEmitEntry() {
+    if (entrySent) return;
+    entrySent = true;
+    cnPageview();
+
+    const marker = takeEntryMarker();
+    const payload = { mode: currentViewName() };
+    if (marker) {
+      payload.source = safeToken(marker.source, 'landing');
+      payload.from = safeToken(marker.from, 'landing');
+      payload.via = 'referral';
+      payload.entry_age_s = Math.max(0, Math.round((Date.now() - marker.ts) / 1000));
+    } else {
+      payload.source = 'direct';
+      payload.from = 'direct';
+      payload.via = 'direct';
+    }
+    cnTrack('gve-entry', payload);
+  }
+
+  function cnEmitExit() {
+    if (exitSent) return;
+    exitSent = true;
+    cnTrack('gve-exit', {
+      dest: safeToken(pendingDest, 'pagehide'),
+      dwell_s: Math.max(0, Math.round((Date.now() - analyticsState.startedAt) / 1000)),
+      saves: analyticsState.saves,
+      exports: analyticsState.exports,
+      resets: analyticsState.resets,
+      undo_count: analyticsState.undo_count,
+      redo_count: analyticsState.redo_count,
+      autosorts: analyticsState.autosorts,
+      items_added: analyticsState.items_added,
+      comics_opened: analyticsState.comics_opened,
+      pages_touched: analyticsState.pagesTouched.size,
+      mode_changes: analyticsState.mode_changes
+    });
+  }
+
+  function setPendingDest(dest) {
+    pendingDest = safeToken(dest, 'pagehide');
+    window.clearTimeout(pendingDestTimer);
+    pendingDestTimer = window.setTimeout(() => {
+      pendingDest = 'pagehide';
+    }, 10000);
+  }
+
+  window.cnGveReady = function () {
+    cnPageview();
+    cnEmitEntry();
+  };
+
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (!event.isTrusted) return;
+      const target = event.target && event.target.closest ? event.target.closest('button') : null;
+      if (!target || target.disabled) return;
+
+      if (target.classList.contains('undo')) {
+        window.cnGveCount('undo_count');
+        return;
+      }
+      if (target.classList.contains('redo')) {
+        window.cnGveCount('redo_count');
+        return;
+      }
+      if (target.classList.contains('autosort')) {
+        window.cnGveCount('autosorts');
+        return;
+      }
+      if (target.classList.contains('mode-btn')) {
+        cnTrack('gve-mode', { mode: safeToken(target.dataset.mode, 'unknown') });
+        return;
+      }
+      if (target.classList.contains('export')) {
+        const row = target.closest('.comic-row');
+        cnTrack('gve-export', {
+          source: row ? 'library' : 'toolbar',
+          comic_id: row && row.dataset.id ? String(row.dataset.id) : lastComicId
+        });
+        return;
+      }
+      if (target.classList.contains('page-btn') && target.closest('#page-list')) {
+        const buttons = Array.prototype.slice.call(target.parentNode.querySelectorAll('.page-btn'));
+        const index = Number(target.dataset.pageIndex);
+        cnTrack('gve-page-select', {
+          page: isFinite(index) && index > 0 ? index : buttons.indexOf(target) + 1
+        });
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.repeat) return;
+      if (!(event.metaKey || event.ctrlKey)) return;
+      const tag = (event.target && event.target.tagName) || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (event.target && event.target.isContentEditable) return;
+      const key = event.key ? event.key.toLowerCase() : '';
+      if (key === 'z') {
+        window.cnGveCount(event.shiftKey ? 'redo_count' : 'undo_count');
+      } else if (key === 'y') {
+        window.cnGveCount('redo_count');
+      }
+    },
+    true
+  );
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', flushAnalytics);
+  } else {
+    flushAnalytics();
+  }
+  window.addEventListener('load', flushAnalytics);
+  window.addEventListener('pagehide', cnEmitExit);
+  // If the demo boot fails, still record one pageview and an entry event.
+  window.setTimeout(cnEmitEntry, 3000);
+
   try {
     if (localStorage.getItem('gve_schema_version') !== '12') {
       Object.keys(localStorage).forEach((k) => {
@@ -318,9 +613,13 @@
     leftGroup.className = 'gve-bar-group';
 
     const backLink = document.createElement('a');
-    backLink.href = '../index.html#live-demo';
+    backLink.href = '../index.html#demo';
     backLink.className = 'gve-bar-btn back-link';
     backLink.textContent = '← Back to Website';
+    backLink.addEventListener('click', (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      setPendingDest('website');
+    });
     leftGroup.appendChild(backLink);
 
     const presets = [
@@ -353,6 +652,15 @@
     readerLink.href = '../demo-reader/index.html?mode=manga-panel-zoom';
     readerLink.className = 'gve-bar-btn reader-link';
     readerLink.textContent = '📖 Switch to Comics Now! Reader (Test Changes) →';
+    readerLink.addEventListener('click', (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      let mode = 'manga-panel-zoom';
+      try {
+        mode = new URL(readerLink.href, window.location.href).searchParams.get('mode') || mode;
+      } catch (_e) {}
+      writeEntryMarker('reader', mode, 'gve-bar', 'gve');
+      setPendingDest('reader');
+    });
 
     const buttons = {};
     presets.forEach((p, idx) => {
@@ -363,6 +671,7 @@
       btn.addEventListener('click', () => {
         Object.values(buttons).forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
+        window.cnTrack?.('gve-preset', { preset: p.id });
         if (p.action === 'library') {
           const libBtn = document.getElementById('nav-library');
           if (libBtn) libBtn.click();

@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="styles.css?v=30">
 
   <!-- Privacy-Friendly Analytics by Umami Cloud (Zero Cookies, GDPR Compliant) -->
-  <script defer src="https://cloud.umami.is/script.js" data-website-id="7cdddfcb-5f98-44b3-a9ef-617b05efc4dd" data-auto-track="true"></script>
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="7cdddfcb-5f98-44b3-a9ef-617b05efc4dd" data-auto-track="true" data-domains="comicsnow.github.io" data-performance="true" data-errors="true" data-release="3.1.0" data-exclude-hash="true"></script>
 
   <!-- JSON-LD Structured Data for Google Rich Snippets -->
   <script type="application/ld+json">
@@ -186,11 +186,11 @@
         <div class="terminal">
           <div class="terminal-head">
             <div class="install-tabs" role="tablist" aria-label="Installation method">
-              <button type="button" class="install-tab is-active" role="tab" id="tab-compose" aria-selected="true" aria-controls="install-code" data-install-tab="compose" data-umami-event="install-tab-compose">Docker Compose</button>
-              <button type="button" class="install-tab" role="tab" id="tab-docker" aria-selected="false" aria-controls="install-code" tabindex="-1" data-install-tab="docker" data-umami-event="install-tab-docker">Docker CLI</button>
-              <button type="button" class="install-tab" role="tab" id="tab-npx" aria-selected="false" aria-controls="install-code" tabindex="-1" data-install-tab="npx" data-umami-event="install-tab-npx">npx</button>
+              <button type="button" class="install-tab is-active" role="tab" id="tab-compose" aria-selected="true" aria-controls="install-code" data-install-tab="compose" data-umami-event="install-tab-compose" data-umami-event-method="mouse">Docker Compose</button>
+              <button type="button" class="install-tab" role="tab" id="tab-docker" aria-selected="false" aria-controls="install-code" tabindex="-1" data-install-tab="docker" data-umami-event="install-tab-docker" data-umami-event-method="mouse">Docker CLI</button>
+              <button type="button" class="install-tab" role="tab" id="tab-npx" aria-selected="false" aria-controls="install-code" tabindex="-1" data-install-tab="npx" data-umami-event="install-tab-npx" data-umami-event-method="mouse">npx</button>
             </div>
-            <button type="button" class="copy-btn" id="copy-install-btn" data-umami-event="copy-install-command" aria-live="polite">Copy</button>
+            <button type="button" class="copy-btn" id="copy-install-btn" aria-live="polite">Copy</button>
           </div>
           <pre class="install-code" id="install-code" role="tabpanel" aria-labelledby="tab-compose" tabindex="0"><code id="install-code-content">services:
   comics-now:
@@ -604,6 +604,6 @@
     </div>
   </footer>
 
-  <script src="app.js?v=19"></script>
+  <script src="app.js?v=20"></script>
 </body>
 </html>

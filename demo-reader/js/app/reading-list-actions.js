@@ -47,7 +47,18 @@ export function closeReadingListModal() {
  * Create a new reading list
  */
 export async function createReadingList() {
+  const track = (result, listCount) => {
+    if (typeof window !== 'undefined') {
+      window.cnTrack?.('reader-reading-list-create', {
+        result: result,
+        comics: 0,
+        lists: listCount
+      });
+    }
+  };
+
   if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+    track('offline', 0);
     alert('Reading list editing is not available while offline.');
     return;
   }
@@ -55,6 +66,7 @@ export async function createReadingList() {
   const name = prompt('Enter a name for your reading list:');
 
   if (!name || name.trim() === '') {
+    track('cancelled', 0);
     return;
   }
 
@@ -65,7 +77,9 @@ export async function createReadingList() {
 
       // Refresh the modal display
       await refreshReadingListModal();
+      track('ok', 1);
     } catch (error) {
+      track('error', 0);
       console.error('[Reading List] Failed to create list:', error);
       alert('Failed to create reading list. Please try again.');
     }

@@ -41,6 +41,323 @@
     window.__DEMO_RELATIVE_PATH__ = `/comic/${MANGA_COMIC_ID}/page/7`;
   }
 
+  // ------------------------------------------------------------------
+  // Umami analytics: privacy-safe payloads, queued boot events, debug mirror
+  // ------------------------------------------------------------------
+  const analyticsState = {
+    startedAt: Date.now(),
+    comics: new Set(),
+    pages: new Set(),
+    modes: new Set(),
+    completed: new Set(),
+    fullscreenUsed: false,
+    maxPagePct: 0
+  };
+  const analyticsQueue = [];
+  const seenPageTurns = new Set();
+  const seenCompletions = new Set();
+  const recentComicOpens = new Map();
+  let pageviewSent = false;
+  let pageviewPending = false;
+  let entrySent = false;
+  let exitSent = false;
+  let currentMode = null;
+  let entryMarker = null;
+  let markerLoaded = false;
+
+  function sanitizeEventData(data) {
+    const clean = {};
+    if (!data) return clean;
+    Object.keys(data).forEach((key) => {
+      const value = data[key];
+      if (typeof value === 'string') clean[key] = value.slice(0, 120);
+      else if (typeof value === 'number' && isFinite(value)) clean[key] = value;
+      else if (typeof value === 'boolean') clean[key] = value;
+    });
+    return clean;
+  }
+
+  function safeToken(value, fallback) {
+    return typeof value === 'string' && /^[a-z0-9-]{1,24}$/.test(value) ? value : fallback;
+  }
+
+  function safeMode(value) {
+    return typeof value === 'string' && /^[a-z0-9-]{1,32}$/.test(value) ? value : 'unknown';
+  }
+
+  function mirrorEvent(name, data) {
+    try {
+      if (localStorage.getItem('cn_analytics_debug') === '1') {
+        const events = window.__cnEvents || (window.__cnEvents = []);
+        events.push({ name, data, ts: Date.now() });
+        if (events.length > 200) events.splice(0, events.length - 200);
+      }
+    } catch (_e) {}
+  }
+
+  function sendEvent(name, data) {
+    if (!window.umami || typeof window.umami.track !== 'function') return false;
+    try {
+      const result = window.umami.track(name, data);
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (_e) {}
+    return true;
+  }
+
+  function cnPageview() {
+    if (pageviewSent) return;
+    if (!window.umami || typeof window.umami.track !== 'function') {
+      pageviewPending = true;
+      return;
+    }
+    try {
+      // A no-argument track() is a pageview; a named call would be an event.
+      const result = window.umami.track();
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+      pageviewSent = true;
+    } catch (_e) {
+      pageviewPending = true;
+    }
+  }
+
+  function flushAnalytics() {
+    if (!window.umami || typeof window.umami.track !== 'function') return;
+    if (pageviewPending && !pageviewSent) {
+      pageviewPending = false;
+      cnPageview();
+    }
+    while (analyticsQueue.length) {
+      const event = analyticsQueue.shift();
+      sendEvent(event.name, event.data);
+    }
+  }
+
+  function cnTrack(name, data) {
+    const payload = sanitizeEventData(data);
+
+    if (name === 'reader-page-turn') {
+      const key = String(payload.comic_id) + ':' + String(payload.page);
+      if (seenPageTurns.has(key)) return;
+      seenPageTurns.add(key);
+    }
+    if (name === 'reader-comic-complete') {
+      const key = String(payload.comic_id);
+      if (seenCompletions.has(key)) return;
+      seenCompletions.add(key);
+    }
+    if (name === 'reader-comic-open' && payload.comic_id != null) {
+      // Router and boot can both announce the same open within a frame or two.
+      const key = String(payload.comic_id);
+      const now = Date.now();
+      if (now - (recentComicOpens.get(key) || 0) < 1500) return;
+      recentComicOpens.set(key, now);
+      analyticsState.comics.add(key);
+    }
+    if (name === 'reader-page-turn') {
+      if (payload.comic_id != null) {
+        analyticsState.pages.add(String(payload.comic_id) + ':' + String(payload.page));
+      }
+      const pct = Number(payload.pct);
+      if (isFinite(pct)) {
+        analyticsState.maxPagePct = Math.max(
+          analyticsState.maxPagePct,
+          Math.min(100, Math.round(pct))
+        );
+      }
+    }
+    if (name === 'reader-comic-complete' && payload.comic_id != null) {
+      analyticsState.completed.add(String(payload.comic_id));
+    }
+    if (name === 'reader-fullscreen-open') analyticsState.fullscreenUsed = true;
+    if (name === 'reader-guided-toggle' && payload.action === 'on' && payload.mode) {
+      analyticsState.modes.add(String(payload.mode));
+    }
+    if (name === 'demo-mode-switch' && payload.mode) {
+      analyticsState.modes.add(String(payload.mode));
+    }
+    if (name === 'reader-entry' && payload.mode) {
+      analyticsState.modes.add(String(payload.mode));
+    }
+
+    mirrorEvent(name, payload);
+    if (!sendEvent(name, payload)) analyticsQueue.push({ name, data: payload });
+  }
+  window.cnTrack = cnTrack;
+
+  function takeEntryMarker() {
+    if (markerLoaded) return entryMarker;
+    markerLoaded = true;
+    try {
+      const raw = sessionStorage.getItem('cn_entry');
+      sessionStorage.removeItem('cn_entry');
+      if (!raw) return null;
+      const marker = JSON.parse(raw);
+      if (!marker || marker.v !== 1 || marker.app !== 'reader') return null;
+      if (typeof marker.ts !== 'number' || !isFinite(marker.ts)) return null;
+      const age = Date.now() - marker.ts;
+      if (age < -60000 || age > 30 * 60 * 1000) return null;
+      entryMarker = marker;
+      return marker;
+    } catch (_e) {
+      return null;
+    }
+  }
+
+  function writeEntryMarker(app, mode, source, from) {
+    try {
+      sessionStorage.setItem(
+        'cn_entry',
+        JSON.stringify({
+          v: 1,
+          app: app,
+          mode: safeMode(mode),
+          source: safeToken(source, 'direct'),
+          from: safeToken(from, 'landing'),
+          ts: Date.now()
+        })
+      );
+    } catch (_e) {}
+  }
+  window.cnWriteEntry = writeEntryMarker;
+
+  function cnEmitEntry(mode) {
+    if (entrySent) return;
+    entrySent = true;
+    cnPageview();
+
+    const marker = takeEntryMarker();
+    const payload = { mode: safeMode(mode || initialMode) };
+    if (marker) {
+      payload.source = safeToken(marker.source, 'landing');
+      payload.from = safeToken(marker.from, 'landing');
+      payload.via = 'referral';
+      payload.entry_age_s = Math.max(0, Math.round((Date.now() - marker.ts) / 1000));
+    } else {
+      payload.source = 'direct';
+      payload.from = 'direct';
+      payload.via = 'direct';
+    }
+    cnTrack('reader-entry', payload);
+  }
+  window.cnReaderEntry = cnEmitEntry;
+
+  function cnEmitExit(dest) {
+    if (exitSent) return;
+    exitSent = true;
+    cnTrack('reader-exit', {
+      dest: safeToken(dest, 'pagehide'),
+      dwell_s: Math.max(0, Math.round((Date.now() - analyticsState.startedAt) / 1000)),
+      comics_opened: analyticsState.comics.size,
+      pages_viewed: analyticsState.pages.size,
+      modes_used: analyticsState.modes.size,
+      fullscreen_used: analyticsState.fullscreenUsed,
+      max_page_pct: analyticsState.maxPagePct,
+      completed: analyticsState.completed.size
+    });
+  }
+  window.cnReaderExit = cnEmitExit;
+
+  function currentComicId() {
+    const comic = window.currentComic;
+    return comic && comic.id != null ? String(comic.id).slice(0, 120) : '';
+  }
+
+  const FULLSCREEN_CONTROLS = {
+    'fullscreen-orientation-btn': {
+      control: 'orientation',
+      state: (btn) => (btn.getAttribute('aria-pressed') === 'true' ? 'landscape' : 'portrait')
+    },
+    'fullscreen-eink-toggle-btn': {
+      control: 'eink',
+      state: (btn) =>
+        btn.classList.contains('active-color')
+          ? 'color'
+          : btn.classList.contains('active-monochrome')
+            ? 'monochrome'
+            : 'off'
+    },
+    'fullscreen-manga-mode-btn': {
+      control: 'manga-mode',
+      state: (btn) => (btn.classList.contains('active') ? 'on' : 'off')
+    },
+    'fullscreen-continuous-mode-btn': {
+      control: 'continuous-mode',
+      state: (btn) => (btn.classList.contains('active') ? 'on' : 'off')
+    },
+    'fullscreen-full-image-btn': {
+      control: 'full-image',
+      state: (btn) => (btn.classList.contains('active') ? 'on' : 'off')
+    },
+    'fullscreen-zoom-toggle-btn': {
+      control: 'zoom',
+      state: (btn) => (btn.getAttribute('aria-pressed') === 'true' ? 'on' : 'off')
+    }
+  };
+
+  function viewSource() {
+    return safeToken(String(window.currentView || ''), 'library');
+  }
+
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (!event.isTrusted) return;
+      const target = event.target && event.target.closest ? event.target.closest('button, [role="tab"]') : null;
+      if (!target || target.disabled) return;
+      const id = target.id || '';
+
+      if (FULLSCREEN_CONTROLS[id]) {
+        const entry = FULLSCREEN_CONTROLS[id];
+        const comicId = currentComicId();
+        window.setTimeout(() => {
+          const btn = document.getElementById(id);
+          if (!btn) return;
+          cnTrack('reader-toggle', {
+            control: entry.control,
+            state: entry.state(btn),
+            comic_id: comicId
+          });
+        }, 400);
+        return;
+      }
+
+      if (id.indexOf('settings-tab-') === 0) {
+        cnTrack('reader-settings-tab', { tab: safeToken(id.slice('settings-tab-'.length), 'unknown') });
+        return;
+      }
+      if (id.indexOf('ct-tab-') === 0) {
+        cnTrack('reader-tagger-tab', { tab: safeToken(id.slice('ct-tab-'.length), 'unknown') });
+        return;
+      }
+      if (id === 'settings-button') {
+        cnTrack('reader-settings-open', { source: viewSource() });
+        return;
+      }
+      if (id === 'ct-button') {
+        cnTrack('reader-tagger-open', { source: viewSource() });
+        return;
+      }
+      if (id === 'reading-list-button') {
+        cnTrack('reader-reading-list-open', { source: viewSource() });
+        return;
+      }
+      if (id === 'downloads-button') {
+        cnTrack('reader-downloads-open', { source: viewSource() });
+      }
+    },
+    true
+  );
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', flushAnalytics);
+  } else {
+    flushAnalytics();
+  }
+  window.addEventListener('load', flushAnalytics);
+  window.addEventListener('pagehide', () => cnEmitExit('pagehide'));
+  // If the demo boot fails, still record one pageview and an entry event.
+  window.setTimeout(() => cnEmitEntry(initialMode), 3000);
+
   // Keep browser URL at index.html so static servers never 404 on SPA routes
   const origPushState = window.history.pushState.bind(window.history);
   const origReplaceState = window.history.replaceState.bind(window.history);
@@ -460,12 +777,16 @@
     }
   });
 
-  async function runDemoAction(action) {
-    if (window.umami && typeof window.umami.track === 'function') {
-      try {
-        window.umami.track('demo-mode-switch', { mode: action });
-      } catch (_e) {}
-    }
+  async function runDemoAction(action, source) {
+    const mode = safeMode(action);
+    const from = currentMode || 'none';
+    currentMode = mode;
+    cnTrack('demo-mode-switch', {
+      mode: mode,
+      source: safeToken(source, 'demo-bar'),
+      from: from,
+      to: mode
+    });
 
     if (window.GuidedView && window.GuidedView.cache) {
       window.GuidedView.cache.clear();
@@ -599,6 +920,10 @@
     homeLink.style.cssText =
       'background:#2a241b;border:1px solid #ffce3a;color:#ffce3a;text-decoration:none;font-size:12px;font-weight:700;padding:5px 10px;border-radius:5px;margin-right:4px;';
     left.appendChild(homeLink);
+    homeLink.addEventListener('click', (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      cnEmitExit('website');
+    });
 
     const modes = [
       { id: 'manga-reader', label: '📖 1. Manga Reader (Zoom Off)', short: '📖 1. Manga' },
@@ -617,7 +942,7 @@
       btn.dataset.short = m.short;
       const isInitial = m.id === initialMode;
       btn.style.cssText = `background:${isInitial ? '#fb4d3d' : '#2a241b'};border:1px solid ${isInitial ? '#ff7b6e' : '#3a3226'};color:${isInitial ? '#ffffff' : '#d1d5db'};font-size:12px;font-weight:700;padding:5px 10px;border-radius:5px;cursor:pointer;`;
-      btn.addEventListener('click', () => runDemoAction(m.id));
+      btn.addEventListener('click', () => runDemoAction(m.id, 'demo-bar'));
       left.appendChild(btn);
     });
 
@@ -644,6 +969,11 @@
     gveLink.style.cssText =
       'background:#0055ff;border:1px solid #60a5fa;color:#ffffff;text-decoration:none;font-size:12px;font-weight:700;padding:5px 12px;border-radius:5px;';
     right.appendChild(gveLink);
+    gveLink.addEventListener('click', (event) => {
+      if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      writeEntryMarker('gve', 'editor', 'reader-bar', 'reader');
+      cnEmitExit('editor');
+    });
 
     bar.appendChild(left);
     bar.appendChild(right);
@@ -700,7 +1030,7 @@
   const bootPoll = setInterval(() => {
     if (window.libraryReady && window.router && !window._isAppInitializing) {
       clearInterval(bootPoll);
-      runDemoAction(initialMode);
+      runDemoAction(initialMode, 'boot').finally(() => cnEmitEntry(initialMode));
     }
   }, 100);
   setTimeout(() => clearInterval(bootPoll), 8000);
@@ -708,6 +1038,6 @@
   window.addEventListener('message', async (event) => {
     const data = event.data;
     if (!data || data.target !== 'comics-now-demo') return;
-    await runDemoAction(data.action);
+    await runDemoAction(data.action, 'postmessage');
   });
 })();

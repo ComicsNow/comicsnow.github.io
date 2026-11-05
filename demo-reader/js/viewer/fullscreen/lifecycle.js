@@ -9,10 +9,40 @@ const global = typeof canonicalGlobal !== 'undefined' ? canonicalGlobal : new Pr
   set: (t, p, v) => { if (typeof state !== 'undefined') state[p] = v; try { t[p] = v; } catch {} return true; }
 });
 
+function trackFullscreenEvent(name) {
+  const comic = global.currentComic;
+  if (!comic || comic.id == null) return;
+  if (typeof window === 'undefined' || typeof window.cnTrack !== 'function') return;
+  window.cnTrack(name, {
+    comic_id: comic.id,
+    page: Math.max(1, Number(global.currentPageIndex || 0) + 1)
+  });
+}
+
+function trackReaderPageProgress(currentPage, totalPages) {
+  const comic = global.currentComic;
+  const total = Number(totalPages);
+  const current = Number(currentPage);
+  if (!comic || comic.id == null || !isFinite(total) || total <= 0) return;
+  if (!isFinite(current) || current <= 0) return;
+  if (typeof window === 'undefined' || typeof window.cnTrack !== 'function') return;
+  const page = Math.min(Math.round(total), Math.max(1, Math.round(current)));
+  window.cnTrack('reader-page-turn', {
+    comic_id: comic.id,
+    page: page,
+    total: Math.round(total),
+    pct: Math.round((page / total) * 100)
+  });
+  if (page >= total) {
+    window.cnTrack('reader-comic-complete', { comic_id: comic.id, total: Math.round(total) });
+  }
+}
+
 export function openFullscreen() {
   const viewer = global.fullscreenViewer;
   const image = global.fullscreenImage;
   if (!viewer || !image) return;
+  const wasHidden = viewer.classList.contains('hidden');
 
   const currentImage = document.querySelector('.viewer-image');
   if (currentImage && currentImage.src && currentImage.src !== '') {
@@ -64,17 +94,19 @@ export function openFullscreen() {
       console.error('[openFullscreen] Error calling refreshGuidedToggle:', err);
     }
   }
+  if (wasHidden) trackFullscreenEvent('reader-fullscreen-open');
 }
 
 export async function closeFullscreen() {
   if (typeof resetCinemaStatus === 'function') resetCinemaStatus();
 
   const viewer = global.fullscreenViewer;
+  const wasOpen = !!viewer && !viewer.classList.contains('hidden');
   if (viewer) {
     viewer.classList.add('hidden');
     viewer.style.display = 'none';
   }
-  
+
   hideFullscreenControls();
   if (typeof stopCinemaPan === 'function') stopCinemaPan();
   try {
@@ -111,6 +143,7 @@ export async function closeFullscreen() {
   if (typeof global.renderPage === 'function') {
     global.renderPage().catch(() => {});
   }
+  if (wasOpen) trackFullscreenEvent('reader-fullscreen-close');
 }
 
 export function updateFullscreenPageStatus(currentPage, totalPages) {
@@ -130,6 +163,8 @@ export function updateFullscreenPageStatus(currentPage, totalPages) {
     pageCounter.textContent = '-- / --';
     return;
   }
+
+  trackReaderPageProgress(currentPage, totalPages);
 
   const pageText = `${currentPage} / ${totalPages}`;
   const progressPercent = Math.round((currentPage / totalPages) * 100);

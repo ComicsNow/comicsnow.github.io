@@ -6,3 +6,16 @@ node_modules/
 .agent-handoff.md
 *.log
 .DS_Store
+
+# Test harnesses and artifacts (never publish)
+tests/
+test/
+e2e/
+*.test.js
+*.spec.js
+playwright-report/
+test-results/
+.playwright/
+
+# Markdown docs stay local
+*.md

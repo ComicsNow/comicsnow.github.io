@@ -10,7 +10,14 @@ export function runLibrarySearch() {
   if (!query) return;
   const field = global.librarySearchField?.value || 'all';
   if (typeof global.showSearchView === 'function') {
-    global.showSearchView(query, field);
+    Promise.resolve(global.showSearchView(query, field)).finally(() => {
+      const results = Array.isArray(window.lastSearchResults) ? window.lastSearchResults.length : -1;
+      window.cnTrack?.('reader-search', {
+        field: String(field),
+        query_length: query.length,
+        results: results
+      });
+    });
   } else {
     console.error('[search] showSearchView is not defined');
   }
@@ -86,7 +93,8 @@ export function initModeToggleControls() {
       global.smartListViewMode = mode;
       if (typeof window !== 'undefined') window.smartListViewMode = mode;
       updateModeButtons();
-      
+      window.cnTrack?.('reader-view-toggle', { context: 'smart', mode: mode });
+
       if (typeof global._renderForActiveScope === 'function') {
         global._renderForActiveScope(global.activeSmartFilter);
       }
@@ -119,11 +127,13 @@ export function initModeToggleControls() {
     searchListBtn.addEventListener('click', () => {
       window.searchViewMode = 'list';
       updateSearchButtons();
+      window.cnTrack?.('reader-view-toggle', { context: 'search', mode: 'list' });
       window.LibraryRender?.rerenderSearchResults?.();
     });
     searchFoldersBtn.addEventListener('click', () => {
       window.searchViewMode = 'folders';
       updateSearchButtons();
+      window.cnTrack?.('reader-view-toggle', { context: 'search', mode: 'folders' });
       window.LibraryRender?.rerenderSearchResults?.();
     });
     updateSearchButtons();

@@ -131,6 +131,15 @@ async function openComicViewer(comic, options = {}) {
 
   global.resetComicSummary?.();
   global.currentComic = comic;
+  if (comic.id != null) {
+    const totalPages = Number(comic.totalPages);
+    window.cnTrack?.('reader-comic-open', {
+      comic_id: comic.id,
+      source: options.readingListId ? 'reading-list' : isLocal ? 'device' : 'library',
+      manga: !!comic.mangaMode,
+      pages: isFinite(totalPages) ? totalPages : 0
+    });
+  }
   global.currentMetadata = null;
   global.currentComicZipCache = null;
   global.preloadedImages?.clear?.();

@@ -119,13 +119,26 @@ export async function refreshAddToListModal() {
  * Handle creating a new list from the modal
  */
 export async function handleCreateNewList() {
+  const comicCount = pendingComicIds.length;
+  const track = (result, listCount) => {
+    if (typeof window !== 'undefined') {
+      window.cnTrack?.('reader-reading-list-create', {
+        result: result,
+        comics: comicCount,
+        lists: listCount
+      });
+    }
+  };
+
   if (isOffline()) {
+    track('offline', 0);
     if (typeof alert === 'function') alert('Reading list editing is not available while offline.');
     return;
   }
 
   const name = typeof prompt === 'function' ? prompt('Enter a name for your reading list:') : '';
   if (!name || !name.trim()) {
+    track('cancelled', 0);
     return;
   }
 
@@ -138,7 +151,9 @@ export async function handleCreateNewList() {
     if (checkbox) {
       checkbox.checked = true;
     }
+    track('ok', 1);
   } catch (error) {
+    track('error', 0);
     if (typeof alert === 'function') alert('Failed to create reading list. Please try again.');
   }
 }
@@ -147,12 +162,26 @@ export async function handleCreateNewList() {
  * Handle saving selected lists
  */
 export async function handleSaveToLists() {
+  const comicCount = pendingComicIds.length;
+  const listCount = selectedListIds.size;
+  const track = (result) => {
+    if (typeof window !== 'undefined') {
+      window.cnTrack?.('reader-reading-list-save', {
+        result: result,
+        comics: comicCount,
+        lists: listCount
+      });
+    }
+  };
+
   if (isOffline()) {
+    track('offline');
     if (typeof alert === 'function') alert('Reading list editing is not available while offline.');
     return;
   }
 
   if (selectedListIds.size === 0) {
+    track('no_selection');
     if (typeof alert === 'function') alert('Please select at least one reading list');
     return;
   }
@@ -164,13 +193,12 @@ export async function handleSaveToLists() {
 
     await Promise.all(promises);
 
-    const comicCount = pendingComicIds.length;
-    const listCount = selectedListIds.size;
-
     closeAddToListModal();
+    track('ok');
 
     if (typeof alert === 'function') alert(`Added ${comicCount} comic(s) to ${listCount} reading list(s)`);
   } catch (error) {
+    track('error');
     if (typeof alert === 'function') alert('Failed to add comics to reading lists. Please try again.');
   }
 }
