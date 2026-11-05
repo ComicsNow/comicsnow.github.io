@@ -233,14 +233,14 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 44px;
+        min-height: 44px;
         background: #0d0f14;
         border-bottom: 2px solid #3b82f6;
-        z-index: 999999;
+        z-index: 40;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 12px;
+        padding: env(safe-area-inset-top) max(12px, env(safe-area-inset-right)) 0 max(12px, env(safe-area-inset-left));
         font-family: 'Roboto Mono', monospace, sans-serif;
         font-size: 12px;
         color: #f5f2eb;
@@ -248,12 +248,10 @@
         overflow-x: auto;
         white-space: nowrap;
         box-sizing: border-box;
+        -webkit-overflow-scrolling: touch;
       }
-      body.has-gve-demo-bar #topbar {
-        margin-top: 44px !important;
-      }
-      body.has-gve-demo-bar main {
-        height: calc(100vh - 92px) !important;
+      body.has-gve-demo-bar {
+        padding-top: var(--gve-demo-bar-height, 44px);
       }
       .gve-bar-group {
         display: flex;
@@ -296,6 +294,18 @@
         background: transparent;
         border-color: #4b5563;
         color: #e5e7eb;
+      }
+      @media (max-width: 640px) {
+        #gve-standalone-demo-bar {
+          padding-left: max(8px, env(safe-area-inset-left));
+          padding-right: max(8px, env(safe-area-inset-right));
+          gap: 5px;
+        }
+        .gve-bar-btn {
+          font-size: 10px;
+          padding: 4px 7px;
+          min-height: 30px;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -370,6 +380,14 @@
     bar.appendChild(leftGroup);
     bar.appendChild(rightGroup);
     document.body.prepend(bar);
+
+    const syncDemoBarSpace = () => {
+      document.documentElement.style.setProperty('--gve-demo-bar-height', bar.offsetHeight + 'px');
+    };
+    syncDemoBarSpace();
+    if (window.ResizeObserver) new ResizeObserver(syncDemoBarSpace).observe(bar);
+    window.addEventListener('resize', syncDemoBarSpace);
+    window.addEventListener('orientationchange', syncDemoBarSpace);
 
     const params = new URLSearchParams(window.location.search);
     const comicParam = params.get('comic');

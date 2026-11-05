@@ -586,7 +586,7 @@
     const bar = document.createElement('div');
     bar.id = 'cn-standalone-demo-bar';
     bar.style.cssText =
-      'position:fixed;top:0;left:0;right:0;z-index:10050;background:#15120e;border-bottom:2px solid #fb4d3d;padding:6px 14px;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.6);';
+      'position:fixed;top:0;left:0;right:0;z-index:40;background:#15120e;border-bottom:2px solid #fb4d3d;padding:calc(6px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left));display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.6);';
 
     const left = document.createElement('div');
     left.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px;';
@@ -594,16 +594,18 @@
     const homeLink = document.createElement('a');
     homeLink.href = '../index.html';
     homeLink.textContent = '← Back to Website';
+    homeLink.dataset.full = '← Back to Website';
+    homeLink.dataset.short = '← Website';
     homeLink.style.cssText =
       'background:#2a241b;border:1px solid #ffce3a;color:#ffce3a;text-decoration:none;font-size:12px;font-weight:700;padding:5px 10px;border-radius:5px;margin-right:4px;';
     left.appendChild(homeLink);
 
     const modes = [
-      { id: 'manga-reader', label: '📖 1. Manga Reader (Zoom Off)' },
-      { id: 'manga-panel-zoom', label: '🔲 2. Manga Panel Zoom' },
-      { id: 'western-bubble-zoom', label: '💬 3. Western Speech Bubble Zoom' },
-      { id: 'library-grid', label: '📚 4. Full Library Grid' },
-      { id: 'reading-list-dag', label: '🔀 5. Crossover Reading Map' }
+      { id: 'manga-reader', label: '📖 1. Manga Reader (Zoom Off)', short: '📖 1. Manga' },
+      { id: 'manga-panel-zoom', label: '🔲 2. Manga Panel Zoom', short: '🔲 2. Panels' },
+      { id: 'western-bubble-zoom', label: '💬 3. Western Speech Bubble Zoom', short: '💬 3. Bubbles' },
+      { id: 'library-grid', label: '📚 4. Full Library Grid', short: '📚 4. Library' },
+      { id: 'reading-list-dag', label: '🔀 5. Crossover Reading Map', short: '🔀 5. Map' }
     ];
 
     modes.forEach((m) => {
@@ -611,6 +613,8 @@
       btn.type = 'button';
       btn.setAttribute('data-cn-demo-btn', m.id);
       btn.textContent = m.label;
+      btn.dataset.full = m.label;
+      btn.dataset.short = m.short;
       const isInitial = m.id === initialMode;
       btn.style.cssText = `background:${isInitial ? '#fb4d3d' : '#2a241b'};border:1px solid ${isInitial ? '#ff7b6e' : '#3a3226'};color:${isInitial ? '#ffffff' : '#d1d5db'};font-size:12px;font-weight:700;padding:5px 10px;border-radius:5px;cursor:pointer;`;
       btn.addEventListener('click', () => runDemoAction(m.id));
@@ -618,6 +622,7 @@
     });
 
     const legend = document.createElement('div');
+    legend.id = 'cn-demo-bar-legend';
     legend.style.cssText =
       'display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#d1d5db;background:#1e1a14;border:1px solid #3a3226;border-radius:5px;padding:3px 8px;margin-left:4px;';
     legend.innerHTML =
@@ -628,11 +633,14 @@
     left.appendChild(legend);
 
     const right = document.createElement('div');
+    right.id = 'cn-demo-bar-right';
     right.style.cssText = 'display:flex;align-items:center;gap:8px;';
 
     const gveLink = document.createElement('a');
     gveLink.href = '../demo-gve/index.html';
     gveLink.textContent = '✏️ Switch to GVE Now! Visual Editor →';
+    gveLink.dataset.full = '✏️ Switch to GVE Now! Visual Editor →';
+    gveLink.dataset.short = '✏️ GVE Editor →';
     gveLink.style.cssText =
       'background:#0055ff;border:1px solid #60a5fa;color:#ffffff;text-decoration:none;font-size:12px;font-weight:700;padding:5px 12px;border-radius:5px;';
     right.appendChild(gveLink);
@@ -640,7 +648,46 @@
     bar.appendChild(left);
     bar.appendChild(right);
     document.body.prepend(bar);
-    document.body.style.paddingTop = '56px';
+
+    if (!document.getElementById('cn-demo-bar-styles')) {
+      const barStyles = document.createElement('style');
+      barStyles.id = 'cn-demo-bar-styles';
+      barStyles.textContent = `
+        @media (max-width: 640px) {
+          #cn-standalone-demo-bar {
+            padding: calc(4px + env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left)) !important;
+            gap: 5px !important;
+          }
+          #cn-standalone-demo-bar a,
+          #cn-standalone-demo-bar button {
+            font-size: 10px !important;
+            padding: 4px 7px !important;
+            min-height: 30px !important;
+          }
+          #cn-demo-bar-legend { display: none !important; }
+          #cn-demo-bar-right { margin-left: auto; }
+        }
+      `;
+      document.head.appendChild(barStyles);
+    }
+
+    const narrowBar = window.matchMedia('(max-width: 640px)');
+    const applyBarLabels = () => {
+      bar.querySelectorAll('[data-full][data-short]').forEach((el) => {
+        el.textContent = narrowBar.matches ? el.dataset.short : el.dataset.full;
+      });
+    };
+    applyBarLabels();
+    if (narrowBar.addEventListener) narrowBar.addEventListener('change', applyBarLabels);
+
+    const syncReaderDemoBarSpace = () => {
+      const height = Math.ceil(bar.getBoundingClientRect().height);
+      document.body.style.paddingTop = height + 8 + 'px';
+    };
+    syncReaderDemoBarSpace();
+    if (window.ResizeObserver) new ResizeObserver(syncReaderDemoBarSpace).observe(bar);
+    window.addEventListener('resize', syncReaderDemoBarSpace);
+    window.addEventListener('orientationchange', syncReaderDemoBarSpace);
   }
 
   if (document.readyState === 'loading') {

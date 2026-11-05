@@ -364,3 +364,53 @@ input[type="search"], input[type="number"], input[type="file"], input[type="text
 }
 .inspector-row input { width: 90px; }
 .inspector-delete { margin-top: 10px; width: 100%; }
+
+/* ---------- mobile ---------- */
+
+@media (max-width: 900px) {
+  #editor-body {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  #editor-toolbar { gap: 8px; padding: 6px 10px; }
+  #page-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    max-height: 22vh;
+  }
+  .page-btn {
+    width: auto;
+    max-width: 48vw;
+    margin: 0;
+  }
+  .stage-pane {
+    flex: 0 0 auto;
+    height: 45vh;
+    min-height: 240px;
+  }
+  .order-pane { max-height: 30vh; }
+  .inspector-pane { max-height: 40vh; }
+  .page-pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .order-pane, .inspector-pane {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@media (max-width: 680px) {
+  #topbar {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 6px 10px;
+  }
+  #topbar button {
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+  .dirty { margin-left: 0; }
+}
