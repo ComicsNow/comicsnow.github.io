@@ -251,7 +251,25 @@ body {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
   gap: 2.5rem;
-  align-items: center;
+  align-items: start;
+}
+
+.hero-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.hero-aside .hero-support {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-end: 0;
+}
+
+.hero-aside .eyebrow-badges {
+  justify-content: flex-end;
+  margin-block-end: 0;
 }
 
 .hero h1 {
@@ -1077,7 +1095,7 @@ body {
   .nav-cta-group {
     flex: 1 1 100%;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.5rem;
   }
 
