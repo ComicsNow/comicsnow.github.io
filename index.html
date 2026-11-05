@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comics Now! — Self-Hosted Comic Server, AI Guided View Reader &amp; Komga/Kavita Alternative</title>
-  <meta name="description" content="Comics Now! is a modern self-hosted comic book &amp; manga server featuring ONNX AI Panel &amp; Bubble Zoom (Guided View), Interactive Continuity DAG reading lists, Gemini AI Vision tagging, E-Ink modes, and 60+ MCP tools.">
+  <title>Comics Now! — Self-Hosted Comic Server with Guided View, AI Panel Zoom &amp; a Visual Editor</title>
+  <meta name="description" content="Comics Now! is a self-hosted CBZ, CBR and PDF comic server. Local AI finds panels and speech bubbles so you can read on a phone without pinching and panning, with a visual editor for fixing what the AI misses.">
   <meta name="keywords" content="self-hosted comic server, comic book reader, guided view comic reader, komga alternative, kavita alternative, ubooquity alternative, cbz cbr pdf reader, comicvine tagger, docker comic server, manga server">
   <link rel="canonical" href="https://comicsnow.github.io/">
   <link rel="me" href="https://github.com/ComicsNow/comics-now">
@@ -13,19 +13,20 @@
 
   <!-- Open Graph / Social Sharing -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Comics Now! — Self-Hosted Comic Server &amp; AI Guided View Reader">
-  <meta property="og:description" content="The modern self-hosted CBZ/CBR/PDF comic server with AI Panel &amp; Bubble Zoom, Continuity DAG reading lists, 7-source auto-tagging, and 60+ AI MCP tools.">
+  <meta property="og:title" content="Comics Now! — Immerse yourself in the comic">
+  <meta property="og:description" content="A self-hosted CBZ/CBR/PDF comic server with AI panel and bubble zoom, a visual guided-view editor, crossover reading maps and one-command Docker or npx setup.">
   <meta property="og:url" content="https://comicsnow.github.io/">
   <meta property="og:image" content="https://comicsnow.github.io/assets/59563.jpg">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Comics Now! — Self-Hosted Comic Server &amp; Guided View Reader">
-  <meta name="twitter:description" content="Compare Comics Now! vs Komga, Kavita, and Ubooquity. AI Panel Zoom, Continuity DAG timelines, and 1-command Docker/npx setup.">
+  <meta name="twitter:title" content="Comics Now! — Immerse yourself in the comic">
+  <meta name="twitter:description" content="Self-hosted comics with AI-guided panel and bubble zoom. Test the real reader in your browser.">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Roboto:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Bungee&family=DM+Mono:wght@400;500&family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/golden-pages/526643c2796492c2c7ad1f59706129453670129e/page_007.jpg">
+  <link rel="stylesheet" href="styles.css?v=30">
 
   <!-- Privacy-Friendly Analytics by Umami Cloud (Zero Cookies, GDPR Compliant) -->
   <script defer src="https://cloud.umami.is/script.js" data-website-id="7cdddfcb-5f98-44b3-a9ef-617b05efc4dd" data-auto-track="true"></script>
@@ -73,10 +74,18 @@
         "mainEntity": [
           {
             "@type": "Question",
-            "name": "How does Comics Now! compare to Komga, Kavita, and Ubooquity?",
+            "name": "Why not just use Komga or Kavita?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Unlike Komga, Kavita, and Ubooquity which focus primarily on static page browsing, Comics Now! includes built-in ONNX neural network Panel & Speech Bubble Zoom (Guided View), an interactive Directed Acyclic Graph (DAG) visualizer for crossover reading orders, a 7-source metadata tagger with Google Gemini Vision fallback, and a 60+ tool MCP server."
+              "text": "Komga and Kavita are better if you need OPDS clients, EPUB novels and a large ecosystem of third-party apps. Comics Now! is built for reading comics on a phone: local AI finds panels and speech bubbles, a visual editor fixes the misses, and a reading map shows how crossover issues connect. You can run all three and pick the reader you prefer."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Do I need a local GPU for AI Guided View panel detection?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Comics Now! can run its detectors locally on your CPU or GPU, and it can also send pages to Modal serverless GPUs so a large import does not slow down your home server."
             }
           },
           {
@@ -84,7 +93,7 @@
             "name": "Can Comics Now! convert CBR and PDF files to CBZ automatically?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. Comics Now! converts RAR/CBR and PDF comics into optimized, streamable CBZ archives and provides independent settings to either keep or delete original CBR and PDF files after verified conversion."
+              "text": "Yes. Comics Now! converts RAR/CBR and PDF comics into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format."
             }
           }
         ]
@@ -94,77 +103,96 @@
   </script>
 </head>
 <body>
-  <header class="site-header">
-    <div class="container nav-bar">
-      <a href="#" class="brand-lockup" aria-label="Comics Now Home">
-        <img src="assets/icon-192x192.png" alt="Comics Now! App Icon" class="app-logo-icon" width="42" height="42">
-        <span class="app-title-riso">
-          COMICS <span class="text-vermilion">NOW</span><span class="logo-exclamation">!</span>
-        </span>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="masthead">
+    <div class="wrap masthead-inner">
+      <a href="#top" class="brand" aria-label="Comics Now! home">
+        <img src="assets/icon-192x192.png" alt="" class="brand-icon" width="40" height="40">
+        <span class="brand-word">COMICS NOW<span class="brand-bang">!</span></span>
       </a>
-      <nav aria-label="Primary Navigation">
+      <nav aria-label="Primary">
         <ul class="nav-links">
+          <li><a href="#demo">Live demo</a></li>
+          <li><a href="#companion">Editor</a></li>
           <li><a href="#features">Features</a></li>
+          <li><a href="#comparison">Compare</a></li>
           <li><a href="#faq">FAQ</a></li>
         </ul>
       </nav>
-      <div class="nav-cta-group">
-        <a href="#live-demo" class="btn btn-outline" data-umami-event="nav-interactive-demo">
-          <span class="btn-label-full">Interactive Demo</span>
-          <span class="btn-label-short">Demo</span>
-        </a>
-        <a href="#comparison" class="btn btn-outline" data-umami-event="nav-comparison">
-          <span class="btn-label-full">vs Komga &amp; Kavita</span>
-          <span class="btn-label-short">vs Komga</span>
-        </a>
-        <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener" class="btn btn-primary" data-umami-event="nav-star-github">
-          <span class="btn-label-full">⭐ Star on GitHub</span>
-          <span class="btn-label-short">⭐ Star</span>
-        </a>
-      </div>
+      <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener" class="btn btn--small btn--paper nav-github" aria-label="Star Comics Now! on GitHub" data-umami-event="nav-star-github">
+        <svg class="icon icon-fill" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 .7a11.3 11.3 0 0 0-3.57 22.02c.57.1.78-.25.78-.55v-2.13c-3.16.69-3.83-1.34-3.83-1.34-.52-1.31-1.26-1.66-1.26-1.66-1.03-.7.08-.69.08-.69 1.14.08 1.74 1.17 1.74 1.17 1.01 1.74 2.66 1.24 3.31.95.1-.74.4-1.24.72-1.53-2.52-.29-5.17-1.26-5.17-5.61 0-1.24.44-2.25 1.17-3.05-.12-.29-.51-1.44.11-3 0 0 .96-.3 3.13 1.17a10.9 10.9 0 0 1 5.7 0c2.17-1.47 3.12-1.17 3.12-1.17.62 1.56.23 2.71.11 3 .73.8 1.17 1.81 1.17 3.05 0 4.36-2.66 5.32-5.19 5.6.41.35.77 1.05.77 2.12v3.14c0 .3.2.66.79.55A11.3 11.3 0 0 0 12 .7Z"/></svg>
+        <span class="nav-github-text">Star on GitHub</span>
+      </a>
     </div>
   </header>
 
-  <main>
-    <!-- Hero Section -->
-    <section class="hero container">
-      <div class="hero-grid">
-        <div>
-          <h1>
-            <span class="text-cream">THE SELF-HOSTED COMIC SERVER WITH</span>
-            <span class="text-vermilion">SUPERPOWERS.</span>
-          </h1>
-          <p class="hero-lead">
-            Most comic servers were built a decade ago as static file browsers. <strong>Comics Now!</strong> re-imagines your CBZ, CBR, and PDF library with <strong>AI Panel &amp; Bubble Zoom</strong>, a visual <strong>GVE Now!</strong> touch-up editor, interactive <strong>Crossover Reading Order Maps</strong>, multi-source auto-tagging, and instant 1-command Docker or <code>npx</code> deployment.
-          </p>
-          <div class="hero-actions">
-            <a href="demo-reader/index.html?mode=manga-reader" class="btn btn-primary" data-umami-event="hero-launch-reader-demo">🚀 Launch Live Reader Demo</a>
-            <a href="demo-gve/index.html" class="btn btn-blue" data-umami-event="hero-launch-gve-demo">✏️ Launch GVE Now! Editor Demo</a>
-            <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener" class="btn btn-outline" data-umami-event="hero-star-github">⭐ Star on GitHub</a>
-          </div>
-        </div>
+  <div class="cover-strip" aria-label="Release information">
+    <div class="wrap cover-strip-inner">
+      <span>No. 3.1.0</span>
+      <span>November 2026</span>
+      <span>Free under AGPL-3.0</span>
+    </div>
+  </div>
 
-        <div class="hero-aside">
-          <div class="hero-support">
-            <a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="btn btn-kofi" data-umami-event="hero-kofi-click">
-              <img src="assets/kofi-favicon.avif" alt="Ko-fi" class="kofi-logo" width="18" height="18" loading="eager">
-              <span>Support on Ko-fi</span>
-            </a>
+  <main id="main" tabindex="-1">
+    <!-- Cover / Hero -->
+    <section id="top" class="hero wrap">
+      <div class="hero-copy">
+        <a class="hero-kofi" href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener"><img src="assets/kofi-favicon.avif" alt="" width="14" height="14"> Support on Ko-fi</a>
+        <h1>Immerse yourself<br>in the comic.</h1>
+        <p class="hero-deck">Komga and Kavita are great file browsers, but reading comics on a phone still means pinching and panning across tiny text. Comics Now! is a self-hosted CBZ/CBR/PDF server that uses local AI to detect panels and speech bubbles automatically&mdash;paired with a <a href="#companion">browser-based visual editor</a> when you want to tweak the reading order yourself.</p>
+        <div class="hero-actions">
+          <a href="demo-reader/index.html?mode=manga-reader" class="btn btn--red btn--large" data-umami-event="hero-launch-reader-demo">Read a comic in your browser</a>
+          <a href="demo-gve/index.html" class="btn btn--large" data-umami-event="hero-launch-gve-demo">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            Open the GVE editor
+          </a>
+        </div>
+        <p class="hero-note">Public-domain and open-licensed pages, loaded locally. No account and no upload. The GVE editor is designed for a desktop browser.</p>
+      </div>
+
+      <figure class="hero-art">
+        <div class="page-sheet">
+          <img src="assets/golden-pages/526643c2796492c2c7ad1f59706129453670129e/page_007.jpg" alt="Page 7 of Give My Regards to Black Jack #001, showing a young doctor and a speech bubble." width="680" height="1007">
+          <svg class="page-marks" viewBox="0 0 680 1007" aria-hidden="true" focusable="false">
+            <rect x="327" y="2" width="331" height="474" class="mark-panel"/>
+          </svg>
+        </div>
+        <div class="phone phone--hero" aria-hidden="true">
+          <div class="phone-top">
+            <svg class="phone-icon is-on" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+            <svg class="phone-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
-          <div class="eyebrow-badges">
-            <span class="corner-badge">RELEASE v3.1.0</span>
-            <span class="corner-badge blue">ONNX AI GUIDED VIEW</span>
-            <span class="corner-badge gold">60+ AI MCP TOOLS</span>
-          </div>
-          <div class="terminal-card" aria-label="Quick Start Installation Commands">
-            <div class="terminal-tabs" role="tablist">
-              <button type="button" class="tab-btn active" role="tab" aria-selected="true" data-install-tab="compose" data-umami-event="install-tab-compose">Docker Compose</button>
-              <button type="button" class="tab-btn" role="tab" aria-selected="false" data-install-tab="docker" data-umami-event="install-tab-docker">Docker CLI</button>
-              <button type="button" class="tab-btn" role="tab" aria-selected="false" data-install-tab="npx" data-umami-event="install-tab-npx">npx (60-Sec Start)</button>
+          <img src="assets/design/bj-panel-zoom.jpg" alt="" width="800" height="1146">
+          <div class="phone-foot">Page 7 / 16</div>
+        </div>
+        <figcaption class="art-caption">A right-to-left manga page in the reader. Tap the panel for a closer look.</figcaption>
+      </figure>
+    </section>
+
+    <!-- Install strip -->
+    <section class="install" aria-labelledby="install-title">
+      <div class="wrap install-inner">
+        <div class="install-copy">
+          <h2 id="install-title" class="subhead">Start it in one command.</h2>
+          <p>Docker Compose, Docker CLI or npx. Node and SQLite underneath, with no JVM and no paid tier.</p>
+          <p class="package-links">
+            <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://www.npmjs.com/package/comics-now" target="_blank" rel="noopener">npm</a>
+            <a href="https://hub.docker.com/r/comicsnowdev/comics-now" target="_blank" rel="noopener">Docker Hub</a>
+          </p>
+        </div>
+        <div class="terminal">
+          <div class="terminal-head">
+            <div class="install-tabs" role="tablist" aria-label="Installation method">
+              <button type="button" class="install-tab is-active" role="tab" id="tab-compose" aria-selected="true" aria-controls="install-code" data-install-tab="compose" data-umami-event="install-tab-compose">Docker Compose</button>
+              <button type="button" class="install-tab" role="tab" id="tab-docker" aria-selected="false" aria-controls="install-code" tabindex="-1" data-install-tab="docker" data-umami-event="install-tab-docker">Docker CLI</button>
+              <button type="button" class="install-tab" role="tab" id="tab-npx" aria-selected="false" aria-controls="install-code" tabindex="-1" data-install-tab="npx" data-umami-event="install-tab-npx">npx</button>
             </div>
-            <div class="terminal-body">
-              <button type="button" class="copy-btn" id="copy-install-btn" data-umami-event="copy-install-command">COPY</button>
-              <pre><code id="install-code-content">services:
+            <button type="button" class="copy-btn" id="copy-install-btn" data-umami-event="copy-install-command" aria-live="polite">Copy</button>
+          </div>
+          <pre class="install-code" id="install-code" role="tabpanel" aria-labelledby="tab-compose" tabindex="0"><code id="install-code-content">services:
   comics-now:
     image: ghcr.io/comicsnow/comics-now:latest
     container_name: comics-now
@@ -174,320 +202,408 @@
       - ./data:/app/data
       - /path/to/your/comics:/comics:ro
     restart: unless-stopped</code></pre>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive demo -->
+    <section id="demo" class="section">
+      <div class="wrap">
+        <div class="section-head">
+          <h2>Test it in your browser right now.</h2>
+          <p>Two samples from the reader. Tap a panel in the manga page or a bubble in Zip Comics and a close-up opens over the page. Tap the close-up to return. The rest of the app is in the contents.</p>
+        </div>
+
+        <div class="demo-layout">
+          <div class="demo-tests">
+            <article class="demo-test">
+              <h3>Panel zoom</h3>
+              <figure class="zoom-demo">
+                <div class="zoom-stage" data-zoom-kind="panels" role="group" aria-label="Panel zoom sample: Give My Regards to Black Jack #001, page 7" aria-describedby="panel-zoom-help">
+                  <img
+                    class="zoom-page"
+                    src="assets/golden-pages/526643c2796492c2c7ad1f59706129453670129e/page_007.jpg"
+                    alt="Page 7 of Give My Regards to Black Jack #001"
+                    width="680"
+                    height="1007"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                  <span class="zoom-hint" aria-hidden="true">Tap a panel</span>
+                  <span class="zoom-status visually-hidden" aria-live="polite">Full page view</span>
+                </div>
+                <figcaption>
+                  <span>Give My Regards to Black Jack #001</span>
+                  <span>Page 7, right to left</span>
+                </figcaption>
+              </figure>
+              <p class="visually-hidden" id="panel-zoom-help">Tap or click any panel to open a close-up over the page. Tap the close-up again to return. With a keyboard, tab to a panel and press Enter; press Escape to return.</p>
+            </article>
+
+            <article class="demo-test">
+              <h3>Speech bubble zoom</h3>
+              <figure class="zoom-demo">
+                <div class="zoom-stage" data-zoom-kind="bubbles" role="group" aria-label="Speech bubble zoom sample: Zip Comics #001, page 6" aria-describedby="bubble-zoom-help">
+                  <img
+                    class="zoom-page"
+                    src="assets/golden-pages/f0d80d4e11db885d08f0572991e6f287185e4646/page_006.jpg"
+                    alt="Page 6 of Zip Comics #001, published in 1940"
+                    width="780"
+                    height="1105"
+                    loading="lazy"
+                    decoding="async"
+                  >
+                  <span class="zoom-hint" aria-hidden="true">Tap a bubble</span>
+                  <span class="zoom-status visually-hidden" aria-live="polite">Full page view</span>
+                </div>
+                <figcaption>
+                  <span>Zip Comics #001 (1940)</span>
+                  <span>Page 6</span>
+                </figcaption>
+              </figure>
+              <p class="visually-hidden" id="bubble-zoom-help">Tap or click any speech bubble to open a close-up over the page. Tap the close-up again to return. With a keyboard, tab to a bubble and press Enter; press Escape to return.</p>
+            </article>
+          </div>
+
+          <aside class="demo-side" aria-labelledby="contents-title">
+            <h3 id="contents-title">In this issue</h3>
+            <ul class="contents">
+              <li>
+                <a href="demo-reader/index.html?mode=manga-reader" data-umami-event="demo-launch-manga-reader">
+                  <span class="contents-name">Reader view</span>
+                  <span class="contents-sub">Give My Regards to Black Jack #001</span>
+                  <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+              </li>
+              <li>
+                <a href="demo-reader/index.html?mode=manga-panel-zoom" data-umami-event="demo-launch-manga-panel-zoom">
+                  <span class="contents-name">Manga panel zoom</span>
+                  <span class="contents-sub">Page 7, right to left</span>
+                  <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+              </li>
+              <li>
+                <a href="demo-reader/index.html?mode=western-bubble-zoom" data-umami-event="demo-launch-western-bubble-zoom">
+                  <span class="contents-name">Western bubble zoom</span>
+                  <span class="contents-sub">Zip Comics #001 (1940)</span>
+                  <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+              </li>
+              <li>
+                <a href="demo-reader/index.html?mode=library-grid" data-umami-event="demo-launch-library-grid">
+                  <span class="contents-name">Library grid</span>
+                  <span class="contents-sub">Publishers, series, issues</span>
+                  <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+              </li>
+              <li>
+                <a href="demo-reader/index.html?mode=reading-list-dag" data-umami-event="demo-launch-crossover-map">
+                  <span class="contents-name">Crossover map</span>
+                  <span class="contents-sub">Six issues, three publishers</span>
+                  <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+              </li>
+              <li>
+                <a href="demo-gve/index.html" data-umami-event="demo-launch-gve-editor">
+                  <span class="contents-name">GVE Now!</span>
+                  <span class="contents-sub">Draw and save your own boxes. Desktop browser.</span>
+                  <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                </a>
+              </li>
+            </ul>
+            <p class="contents-note">Every page in the demo is public domain or openly licensed.</p>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- Companion apps -->
+    <section id="companion" class="section">
+      <div class="wrap">
+        <div class="section-head section-head--narrow">
+          <h2>The AI does a first pass. You make the final call.</h2>
+          <p>Comics Now! finds panels and speech bubbles on its own. When it misses a tricky one, open GVE Now! in the same browser, drag the box, and save. The reader has the change on the next page.</p>
+        </div>
+
+        <div class="diptych">
+          <figure class="pane pane--editor">
+            <div class="editor-chrome">
+              <div class="editor-bar">
+                <span class="editor-word">GVE Now!</span>
+                <span class="editor-file">Black Jack #001 · p.7</span>
+                <span class="editor-save">Save</span>
+              </div>
+              <div class="editor-stage">
+                <div class="editor-canvas">
+                  <img src="assets/golden-pages/526643c2796492c2c7ad1f59706129453670129e/page_007.jpg" alt="The GVE Now! editor showing a manga page with detected panel and bubble boxes." width="680" height="1007" loading="lazy">
+                  <svg class="editor-marks" viewBox="0 0 680 1007" aria-hidden="true" focusable="false">
+                    <g class="emo-panels">
+                      <rect x="327" y="2" width="331" height="474"/>
+                      <rect x="10" y="0" width="312" height="288"/>
+                      <rect x="15" y="300" width="308" height="176"/>
+                      <rect x="23" y="488" width="635" height="519"/>
+                    </g>
+                    <g class="emo-bubbles">
+                      <rect x="527" y="90" width="111" height="115"/>
+                      <rect x="219" y="81" width="88" height="57"/>
+                      <rect x="9" y="92" width="134" height="76"/>
+                      <rect x="350" y="365" width="51" height="58"/>
+                      <rect x="249" y="336" width="63" height="39"/>
+                      <rect x="524" y="521" width="130" height="79"/>
+                    </g>
+                    <g class="emo-selected">
+                      <rect x="23" y="488" width="635" height="519" class="sel-outline"/>
+                      <rect x="15" y="480" width="16" height="16" class="handle"/>
+                      <rect x="650" y="480" width="16" height="16" class="handle"/>
+                      <rect x="15" y="999" width="16" height="16" class="handle"/>
+                      <rect x="650" y="999" width="16" height="16" class="handle"/>
+                    </g>
+                  </svg>
+                  <span class="drag-hint"><svg class="cursor" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 2l7 19 2.5-7.5L21 11 4 2Z"/></svg> drag to fix</span>
+                </div>
+              </div>
             </div>
+            <figcaption>
+              <span class="pane-label">GVE Now!, the editor</span>
+              Blue boxes are panels, yellow are bubbles. Drag a corner or draw a new one; nothing changes in the reader until you save.
+              <a class="text-link" href="https://github.com/ComicsNow/gve-now-editor" target="_blank" rel="noopener">GVE Now! source</a>
+            </figcaption>
+          </figure>
+
+          <figure class="pane pane--reader">
+            <div class="reader-frame">
+              <div class="reader-phone">
+                <div class="reader-toolbar">
+                  <svg class="phone-icon is-on" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                  <svg class="phone-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                </div>
+                <img src="assets/design/bj-panel-zoom.jpg" alt="The same page in Comics Now!, zoomed to the top-right panel showing a man at a sink." width="800" height="1146" loading="lazy">
+                <div class="reader-foot">Page 7 of 16</div>
+              </div>
+            </div>
+            <figcaption>
+              <span class="pane-label">Comics Now!, the reader</span>
+              The same page in the reader. One tap on the panel, and it fills the phone. No pinching, no panning.
+            </figcaption>
+          </figure>
+        </div>
+
+        <div class="companion-actions">
+          <a class="btn btn--red" href="demo-gve/index.html" data-umami-event="companion-open-gve">Open the editor</a>
+          <a class="btn" href="demo-reader/index.html?mode=manga-panel-zoom" data-umami-event="companion-see-reader">See it in the reader</a>
+        </div>
+        <p class="companion-note">GVE Now! is designed for a desktop browser. The reader is the phone-first half.</p>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section id="features" class="section">
+      <div class="wrap features-layout">
+        <div class="features-head">
+          <h2>Built for huge libraries and small screens.</h2>
+          <p>The parts that matter after you have scanned ten thousand pages. No dashboards, no busywork.</p>
+        </div>
+
+        <ul class="feature-list">
+          <li>
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v3M3 8h3M16 21v-3M21 16h-3"/></svg>
+            </span>
+            <div>
+              <h3>Panel and bubble zoom</h3>
+              <p>Local ONNX models find the boxes on every page. Tap one and it fills the screen, in right-to-left manga or western comics.</p>
+            </div>
+          </li>
+          <li>
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="12" r="2.5"/><circle cx="8" cy="19" r="2.5"/><path d="M7.3 7.2 16.7 11M6 8.4 7.4 16.6M10.5 18.2 16.6 13.4"/></svg>
+            </span>
+            <div>
+              <h3>Crossover reading maps</h3>
+              <p>See how a tie-in connects across series and publishers, and which issue to open next.</p>
+            </div>
+          </li>
+          <li>
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h6l2 2h6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7Z"/><path d="M9 13h6M12 10v6"/></svg>
+            </span>
+            <div>
+              <h3>Metadata that fills itself in</h3>
+              <p>ComicVine, Metron and the Grand Comics Database, with Gemini cover matching when the filenames are wrong.</p>
+            </div>
+          </li>
+          <li>
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 2 2-2 2M12 15h5"/></svg>
+            </span>
+            <div>
+              <h3>An MCP server for your shelf</h3>
+              <p>Sixty-plus tools let Claude, Gemini CLI or Cursor search the library, fix tags and build reading lists.</p>
+            </div>
+          </li>
+          <li>
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6V2Z"/><path d="M14 2v5h5M9 14h6M12 11v6"/></svg>
+            </span>
+            <div>
+              <h3>CBR and PDF, handled</h3>
+              <p>Convert to streamable CBZ once. Keep or delete the originals, with separate rules for CBR and PDF.</p>
+            </div>
+          </li>
+          <li>
+            <span class="feature-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M9 6h6M9 18h6"/><circle cx="12" cy="12" r="2.5"/></svg>
+            </span>
+            <div>
+              <h3>Offline and E-Ink</h3>
+              <p>Resumable downloads for tablets, plus monochrome and color display modes for Boox, Kobo and PocketBook.</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- Comparison -->
+    <section id="comparison" class="section">
+      <div class="wrap">
+        <div class="section-head section-head--narrow">
+          <h2>How it stacks up against Komga and Kavita.</h2>
+          <p>Eight differences that matter. We win some, they win some. Pick the tool that fits how you read.</p>
+        </div>
+
+        <div class="table-frame">
+          <p class="table-caption" id="comparison-caption">Feature comparison between Comics Now!, Komga, Kavita and Ubooquity, as of v3.1.0.</p>
+          <p class="table-hint" id="comparison-hint">Swipe sideways to compare all four readers <span aria-hidden="true">&rarr;</span></p>
+          <div class="table-wrap" tabindex="0" role="region" aria-labelledby="comparison-caption" aria-describedby="comparison-hint">
+            <table class="compare" aria-labelledby="comparison-caption">
+            <thead>
+              <tr>
+                <th scope="col">Capability</th>
+                <th scope="col" class="is-us">Comics Now!</th>
+                <th scope="col">Komga</th>
+                <th scope="col">Kavita</th>
+                <th scope="col">Ubooquity</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">AI panel and bubble zoom</th>
+                <td class="is-us"><span class="yes">Built in</span><span class="cell-note">Local ONNX or Modal GPU</span></td>
+                <td>No</td>
+                <td>No</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <th scope="row">Visual zoom-box editor</th>
+                <td class="is-us"><span class="yes">Built in</span><span class="cell-note">GVE Now!, in the browser</span></td>
+                <td>No</td>
+                <td>No</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <th scope="row">Crossover reading map</th>
+                <td class="is-us"><span class="yes">Interactive graph</span></td>
+                <td>Flat lists</td>
+                <td>Flat lists</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <th scope="row">Multi-source auto-tagging</th>
+                <td class="is-us"><span class="yes">Built in</span><span class="cell-note">ComicVine, Metron, GCD and Gemini</span></td>
+                <td>External tools</td>
+                <td>Kavita+, a paid add-on</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <th scope="row">AI agent and MCP tools</th>
+                <td class="is-us"><span class="yes">60+ tools</span></td>
+                <td>No</td>
+                <td>No</td>
+                <td>No</td>
+              </tr>
+              <tr>
+                <th scope="row">Dedicated E-Ink modes</th>
+                <td class="is-us"><span class="yes">Monochrome and color</span></td>
+                <td>No dedicated mode</td>
+                <td>Themes only</td>
+                <td>No</td>
+              </tr>
+              <tr class="row-gap">
+                <th scope="row">OPDS and EPUB support</th>
+                <td class="is-us"><span class="no">Not yet</span></td>
+                <td><span class="yes">OPDS and EPUB</span></td>
+                <td><span class="yes">OPDS and EPUB</span></td>
+                <td><span class="yes">OPDS and EPUB</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Runtime and license</th>
+                <td class="is-us">Node and SQLite<span class="cell-note">AGPL-3.0</span></td>
+                <td>JVM<span class="cell-note">MIT</span></td>
+                <td>.NET and SQLite<span class="cell-note">GPL, plus a paid tier</span></td>
+                <td>Java<span class="cell-note">Freeware, unmaintained</span></td>
+              </tr>
+            </tbody>
+            </table>
           </div>
         </div>
+
+        <p class="table-note">If OPDS clients and EPUB novels are must-haves today, Komga and Kavita are the better tools for that job. Comics Now! is built around the reading view, the editor and AI-assisted cataloguing.</p>
       </div>
     </section>
 
-    <!-- Interactive Live App Demo Launchpad: Full-Page Standalone Apps -->
-    <section id="live-demo" class="section container">
-      <div class="section-header">
-        <h2 class="section-title"><span class="text-cream">TRY THE REAL APPS:</span> <span class="text-vermilion">FULL-SCREEN LIVE DEMO</span></h2>
-        <p class="section-subtitle">Launch the actual <strong>Comics Now!</strong> reader and <strong>GVE Now!</strong> visual editor in a full-screen standalone page—pre-loaded with the open-license manga <strong>Give My Regards to Black Jack #001</strong> (by Shuho Sato, for Right-to-Left Manga Panel &amp; Bubble Zoom) plus <strong>6 Public Domain Golden Age comics (1940–1954)</strong>.</p>
-      </div>
-
-      <div id="live-demo-app" class="demo-launchpad">
-        <div class="demo-launchpad-banner">
-          <div>
-            <span class="bento-tag">DEDICATED FULL-SCREEN APPS • LIVE SYNC VIA BROWSER STORAGE</span>
-            <h3>Choose a Feature Below to Open the Full-Screen Live Demo</h3>
-            <p>Each demo page includes a top <strong>Demo Switcher Bar</strong> so you can jump between Manga Panel Zoom, Western Speech Bubble Zoom, the Library Grid, the Crossover Reading Order Map, and the <strong>GVE Now! Visual Editor</strong>—or return here with one click.</p>
-          </div>
-          <div class="demo-launchpad-ctas">
-            <a href="demo-reader/index.html?mode=manga-reader" class="btn btn-primary">🚀 Open Comics Now! Reader</a>
-            <a href="demo-gve/index.html" class="btn btn-blue">✏️ Open GVE Now! Visual Editor</a>
-          </div>
+    <!-- FAQ -->
+    <section id="faq" class="section">
+      <div class="wrap faq-layout">
+        <div class="faq-head">
+          <h2>Questions people ask before installing.</h2>
+          <p>If yours is not here, open an issue on GitHub and ask directly.</p>
+          <a class="text-link" href="https://github.com/ComicsNow/comics-now/issues" target="_blank" rel="noopener">Open an issue</a>
         </div>
-
-        <!-- Fullscreen UI Icon Guide Callout -->
-        <div class="demo-icon-guide">
-          <span class="demo-icon-guide-title">💡 Fullscreen UI Zoom Icons:</span>
-          <span class="demo-icon-item"><span class="demo-icon-badge">🔲 Square / Rectangle</span> <strong>Panel Zoom:</strong> Tap any comic panel to zoom in with razor-sharp clarity</span>
-          <span class="demo-icon-item"><span class="demo-icon-badge">💬 Speech Bubble</span> <strong>Bubble Zoom:</strong> Tap any dialogue bubble to zoom in on speech text</span>
-          <span class="demo-icon-note"><em>(You will see these zoom icons in the top toolbar when in <strong>Fullscreen Mode</strong>)</em></span>
+        <div class="faq-list">
+          <details class="faq-item" open>
+            <summary>Why not just use Komga or Kavita?</summary>
+            <p>They are better if you need OPDS clients, EPUB novels and a large ecosystem of third-party apps. Comics Now! is built for reading comics on a phone: local AI finds panels and speech bubbles, a visual editor fixes the misses, and a reading map shows how crossover issues connect. You can run all three and pick the reader you prefer.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Do I need a GPU for panel detection?</summary>
+            <p>No. The detectors run locally on your CPU or GPU, and pages can also go to Modal serverless GPUs so a large import does not slow down your home server.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How does CBR and PDF conversion work?</summary>
+            <p>Comics Now! converts RAR/CBR and PDF files into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Is it really free?</summary>
+            <p>Yes. The server and the editor are AGPL-3.0, with no account and no paid tier. You bring the hardware, the comics and, if you want cloud tagging or detection, your own API keys.</p>
+          </details>
         </div>
-
-        <div class="demo-launch-grid">
-          <a href="demo-reader/index.html?mode=manga-reader" class="demo-launch-card" data-umami-event="demo-launch-manga-reader">
-            <span class="bento-tag">MODE 01 // COMIC READER VIEW</span>
-            <h4>📖 Manga &amp; Comic Page Reader</h4>
-            <p>Open <em>Give My Regards to Black Jack #001</em> in the standard reader view with single-page flip, continuous vertical scroll, E-Ink display modes, and page scrubbing (Panel Zoom and Bubble Zoom automatically off).</p>
-            <span class="demo-launch-link">Launch Reader View →</span>
-          </a>
-
-          <a href="demo-reader/index.html?mode=manga-panel-zoom" class="demo-launch-card highlight" data-umami-event="demo-launch-manga-panel-zoom">
-            <span class="bento-tag">MODE 02 // MANGA PANEL ZOOM (RTL)</span>
-            <h4>🔲 Manga Panel Zoom</h4>
-            <p>Jump straight into Fullscreen mode on Page 7 of <em>Give My Regards to Black Jack #001</em> with <strong>Manga Panel Zoom (🔲 square icon)</strong> automatically on. Tap any panel to zoom in, or switch to <strong>Bubble Zoom (💬 bubble icon)</strong> in the Fullscreen top bar.</p>
-            <span class="demo-launch-link">Launch Manga Panel Zoom →</span>
-          </a>
-
-          <a href="demo-reader/index.html?mode=western-bubble-zoom" class="demo-launch-card" data-umami-event="demo-launch-western-bubble-zoom">
-            <span class="bento-tag">MODE 03 // WESTERN SPEECH BUBBLES</span>
-            <h4>💬 Western Speech Bubble Zoom</h4>
-            <p>Open <em>Zip Comics #001 (1940)</em> in Fullscreen mode with <strong>Speech Bubble Zoom (💬 bubble icon)</strong> automatically on. Tap any dialogue balloon to zoom into speech text, visible in the Fullscreen top toolbar.</p>
-            <span class="demo-launch-link">Launch Western Bubble Zoom →</span>
-          </a>
-
-          <a href="demo-reader/index.html?mode=library-grid" class="demo-launch-card" data-umami-event="demo-launch-library-grid">
-            <span class="bento-tag">MODE 04 // POSTER LIBRARY</span>
-            <h4>📚 Full Library Grid &amp; Publishers</h4>
-            <p>Explore the poster-forward publisher, series, and issue grid with Shuho Sato, MLJ Magazines, Rural Home, Dell Publishing, and Fawcett Publications.</p>
-            <span class="demo-launch-link">Launch Library Grid →</span>
-          </a>
-
-          <a href="demo-reader/index.html?mode=reading-list-dag" class="demo-launch-card" data-umami-event="demo-launch-crossover-map">
-            <span class="bento-tag">MODE 05 // MULTI-SERIES TIMELINE</span>
-            <h4>🔀 Visual Crossover Reading Map</h4>
-            <p>Open the interactive multi-publisher crossover flowchart connecting 6 Golden Age issues with pan/zoom navigation and issue inspection.</p>
-            <span class="demo-launch-link">Launch Crossover Map →</span>
-          </a>
-
-          <a href="demo-gve/index.html" class="demo-launch-card gve-card" data-umami-event="demo-launch-gve-editor">
-            <span class="bento-tag">MODE 06 // COMPANION VISUAL EDITOR</span>
-            <h4>✏️ GVE Now! Visual Panel &amp; Bubble Editor</h4>
-            <p>Drag, resize, split, or draw new panel and speech bubble polygons, reorder reading sequences, and click <strong>Save</strong> for instant reader sync. You can also <strong>import &amp; export</strong> your custom GVE files to easily share your curated guided-view edits with friends!</p>
-            <span class="demo-launch-link">Launch GVE Now! Editor →</span>
-          </a>
-        </div>
-      </div>
-    </section>
-
-    <!-- Core Features Bento Grid -->
-    <section id="features" class="section container">
-      <div class="section-header">
-        <h2 class="section-title"><span class="text-cream">ENGINEERED FOR</span> <span class="text-vermilion">COLLECTORS &amp; READERS</span></h2>
-        <p class="section-subtitle">Built from the ground up to make reading, organizing, and tracking your comic collection effortless on any screen.</p>
-      </div>
-      <div class="bento-grid">
-        <article class="bento-card">
-          <span class="bento-tag">01 // SMART GUIDED VIEW</span>
-          <h3>Interactive Panel &amp; Bubble Zoom</h3>
-          <p>Tap any comic panel or speech bubble to zoom in with razor-sharp clarity—no more pinching and panning across tiny text on phones or tablets.</p>
-        </article>
-        <article class="bento-card">
-          <span class="bento-tag">02 // CROSSOVER TIMELINES</span>
-          <h3>Visual Crossover Reading Order Map</h3>
-          <p>Stop losing your place in multi-series comic events. See how storylines connect across different series and publishers with an interactive visual timeline map that shows you the exact issue to read next.</p>
-        </article>
-        <article class="bento-card">
-          <span class="bento-tag">03 // MULTI-SOURCE AI TAGGER</span>
-          <h3>ComicVine, Metron, GCD &amp; Gemini Vision</h3>
-          <p>Built-in metadata enrichment querying ComicVine, Metron, Grand Comics Database, and more—plus Gemini AI Vision to identify covers when filenames fail.</p>
-        </article>
-        <article class="bento-card">
-          <span class="bento-tag">04 // AGENTIC AUTOMATION</span>
-          <h3>60+ Tool Native MCP Server</h3>
-          <p>Connect Claude Desktop, Gemini CLI, or Cursor directly to your library. Curate reading lists, inspect cover art, batch-tag from URLs, and query your collection in natural language.</p>
-        </article>
-        <article class="bento-card">
-          <span class="bento-tag">05 // ARCHIVE PIPELINE (NEW IN v3.1)</span>
-          <h3>Smart CBR &amp; PDF to CBZ Conversion</h3>
-          <p>Automatically converts CBR and PDF files into fast, streamable CBZ archives with independent settings to keep or delete original CBR and PDF files after verification.</p>
-        </article>
-        <article class="bento-card">
-          <span class="bento-tag">06 // EVERY SCREEN &amp; E-READER</span>
-          <h3>Offline PWA &amp; E-Ink Anti-Ghosting</h3>
-          <p>Resumable offline downloads for iOS and Android tablets, plus dedicated Monochrome &amp; Color E-Ink display modes for e-paper devices like Onyx Boox, Bigme, Kobo, and PocketBook.</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- How Comics Now! + GVE Now! Work Together -->
-    <section id="gve-ecosystem" class="section container">
-      <div class="section-header">
-        <h2 class="section-title"><span class="text-cream">TWO COMPANION APPS:</span> <span class="text-vermilion">COMICS NOW! + GVE NOW!</span></h2>
-        <p class="section-subtitle">Let AI find every panel and speech bubble automatically—then use <strong>GVE Now!</strong> whenever you want to visually tweak or customize how a page zooms.</p>
-      </div>
-
-      <div class="ecosystem-grid">
-        <div class="eco-card">
-          <span class="bento-tag">STEP 1 // AUTOMATIC AI DETECTION</span>
-          <h3>🧠 Comics Now! Smart Reader</h3>
-          <p>Comics Now! automatically scans your pages to find every panel and speech bubble, letting you tap to zoom into artwork and dialogue right away on your phone, tablet, or desktop.</p>
-        </div>
-
-        <div class="eco-bridge" aria-hidden="true">
-          <div class="bridge-pill">INSTANT SYNC • CHANGES APPEAR IMMEDIATELY IN YOUR READER</div>
-          <div class="bridge-arrows">⇄</div>
-        </div>
-
-        <div class="eco-card highlight">
-          <span class="bento-tag">STEP 2 // VISUAL TOUCH-UP EDITOR</span>
-          <h3>✏️ GVE Now! Companion Editor</h3>
-          <p>Did the AI miss a tricky panel or speech bubble? Open <strong>GVE Now!</strong> in your browser to draw, resize, split, or reorder zoom boxes right on the page. Click Save to see changes live immediately in <strong>Comics Now!</strong>—plus, you can <strong>import and export</strong> your GVE sidecar edits at any time to share your custom zoom layouts and reading orders with friends!</p>
-          <div class="eco-actions">
-            <a href="https://github.com/ComicsNow/gve-now-editor" target="_blank" rel="noopener" class="btn btn-blue">⭐ Explore GVE Now! on GitHub</a>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Comparison Matrix Section -->
-    <section id="comparison" class="section container">
-      <div class="section-header">
-        <h2 class="section-title"><span class="text-cream">COMICS NOW! VS</span> <span class="text-vermilion">KOMGA, KAVITA &amp; UBOOQUITY</span></h2>
-        <p class="section-subtitle">See how Comics Now! compares side-by-side against traditional self-hosted comic servers across AI reading, cataloging, and deployment.</p>
-      </div>
-
-      <div class="filter-pills" role="group" aria-label="Filter comparison categories">
-        <button type="button" class="pill-btn active" data-compare-filter="all">All Features (15)</button>
-        <button type="button" class="pill-btn" data-compare-filter="reader">AI &amp; Smart Reader</button>
-        <button type="button" class="pill-btn" data-compare-filter="metadata">Metadata &amp; Library</button>
-        <button type="button" class="pill-btn" data-compare-filter="platform">Hosting &amp; Security</button>
-      </div>
-
-      <div tabindex="0" role="region" aria-labelledby="comparison-caption" class="table-wrapper">
-        <table class="comparison-table">
-          <caption id="comparison-caption">Feature comparison between Comics Now! + GVE Now!, Komga, Kavita, and Ubooquity (Updated 2026)</caption>
-          <thead>
-            <tr>
-              <th scope="col">Capability / Feature</th>
-              <th scope="col" class="highlight-col">Comics Now! + GVE Now!</th>
-              <th scope="col">Komga</th>
-              <th scope="col">Kavita</th>
-              <th scope="col">Ubooquity</th>
-            </tr>
-          </thead>
-          <tbody id="comparison-tbody">
-            <tr data-category="reader">
-              <th scope="row">AI Panel &amp; Speech Bubble Zoom (Guided View)</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Built-In (Local AI + Cloud GPU)</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="reader">
-              <th scope="row">GVE Now! Visual Panel &amp; Bubble Editor</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Draw, Resize, Import/Export &amp; Share with Friends</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="reader">
-              <th scope="row">Visual Crossover Timeline &amp; Reading Order Map</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Interactive Storyline Flowchart</span></td>
-              <td><span class="badge-no">✗ Flat Lists Only</span></td>
-              <td><span class="badge-no">✗ Flat Lists Only</span></td>
-              <td><span class="badge-no">✗ None</span></td>
-            </tr>
-            <tr data-category="metadata">
-              <th scope="row">Built-In Multi-Source Auto-Tagger + Cover Matching</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Built-In (ComicVine, Metron, GCD &amp; More)</span></td>
-              <td><span class="badge-partial">⚠ Requires External Tool</span></td>
-              <td><span class="badge-partial">⚠ Paid Kavita+ / External</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="metadata">
-              <th scope="row">Google Gemini AI Vision Cover Recognition</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Built-In Vision Fallback</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="metadata">
-              <th scope="row">AI Model Context Protocol (MCP) Server</th>
-              <td class="highlight-col"><span class="badge-yes">✓ 60+ Native MCP Tools</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="metadata">
-              <th scope="row">Auto CBR &amp; PDF → CBZ Conversion + Retention Rules</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Separate CBR &amp; PDF Controls</span></td>
-              <td><span class="badge-partial">⚠ CBR Only / Manual</span></td>
-              <td><span class="badge-no">✗ No Built-In Converter</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="metadata">
-              <th scope="row">Token-Based File &amp; Folder Renamer / Organizer</th>
-              <td class="highlight-col"><span class="badge-yes">✓ 4-Tab Organizer + Preview</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="reader">
-              <th scope="row">Dedicated E-Ink Display Modes (Monochrome &amp; Color)</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Monochrome &amp; Color Modes</span></td>
-              <td><span class="badge-no">✗ Standard Web UI</span></td>
-              <td><span class="badge-partial">⚠ Basic Theme</span></td>
-              <td><span class="badge-no">✗ Legacy HTML</span></td>
-            </tr>
-            <tr data-category="reader">
-              <th scope="row">Resumable Offline PWA + Android Background Fetch</th>
-              <td class="highlight-col"><span class="badge-yes">✓ HTTP Range Resumable PWA</span></td>
-              <td><span class="badge-no">✗ Requires 3rd-Party App</span></td>
-              <td><span class="badge-no">✗ Online Only in Browser</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="reader">
-              <th scope="row">Zero-Upload Local Browser CBZ/CBR Reader</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Drag &amp; Drop WebAssembly</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-              <td><span class="badge-no">✗ No</span></td>
-            </tr>
-            <tr data-category="platform">
-              <th scope="row">Cloudflare Zero Trust JWT &amp; Granular Permissions</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Native JWT + Publisher ACLs</span></td>
-              <td><span class="badge-partial">⚠ OAuth2 / Header Auth</span></td>
-              <td><span class="badge-partial">⚠ OIDC Support</span></td>
-              <td><span class="badge-no">✗ Basic Auth</span></td>
-            </tr>
-            <tr data-category="platform">
-              <th scope="row">AES-256-GCM Encrypted Secrets Vault</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Envelope Encryption at Rest</span></td>
-              <td><span class="badge-no">✗ Plaintext Config</span></td>
-              <td><span class="badge-no">✗ Plaintext Config</span></td>
-              <td><span class="badge-no">✗ Plaintext Config</span></td>
-            </tr>
-            <tr data-category="platform">
-              <th scope="row">Runtime Memory Footprint &amp; Installation</th>
-              <td class="highlight-col"><span class="badge-yes">✓ Lightweight Node/SQLite (Docker &amp; npx)</span></td>
-              <td><span class="badge-partial">⚠ Heavy JVM (~1GB+ RAM)</span></td>
-              <td><span class="badge-yes">✓ .NET / SQLite</span></td>
-              <td><span class="badge-partial">⚠ Unmaintained Java</span></td>
-            </tr>
-            <tr data-category="platform">
-              <th scope="row">Open-Source License</th>
-              <td class="highlight-col"><span class="badge-yes">✓ 100% Free (AGPL-3.0)</span></td>
-              <td><span class="badge-yes">✓ MIT</span></td>
-              <td><span class="badge-partial">⚠ GPL + Paid Kavita+ Tier</span></td>
-              <td><span class="badge-no">✗ Closed Source</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- SEO FAQ Section -->
-    <section id="faq" class="section container">
-      <div class="section-header">
-        <h2 class="section-title"><span class="text-cream">FREQUENTLY ASKED</span> <span class="text-vermilion">QUESTIONS</span></h2>
-      </div>
-      <div class="faq-list">
-        <details class="faq-item" open>
-          <summary>Why choose Comics Now! over Komga, Kavita, or Ubooquity?</summary>
-          <p>Komga and Kavita are great traditional digital bookshelves, but neither provides <strong>AI Panel &amp; Speech Bubble Zoom (Guided View)</strong>, the <strong>GVE Now! visual panel editor</strong>, an interactive <strong>Visual Crossover Reading Order Map</strong> for multi-series events, or a built-in <strong>multi-source metadata tagger with Google Gemini Vision cover recognition</strong>. Comics Now! also runs without a heavy Java Virtual Machine and requires zero paid subscriptions.</p>
-        </details>
-        <details class="faq-item">
-          <summary>How does CBR and PDF to CBZ conversion work in v3.1.0?</summary>
-          <p>Comics Now! converts RAR (<code>.cbr</code>) and <code>.pdf</code> files into streamable <code>.cbz</code> archives with full page integrity verification. In <strong>Settings → Library Preferences</strong>, you have two independent controls to either <strong>Keep Original Files</strong> (the safe default) or <strong>Delete Originals After Conversion</strong> separately for CBRs and PDFs.</p>
-        </details>
-        <details class="faq-item">
-          <summary>Do I need a local GPU for AI Guided View panel detection?</summary>
-          <p>No! While Comics Now! can run its AI detectors locally on your CPU or GPU, it also integrates natively with <strong>Modal Serverless Cloud GPUs</strong> to process comic pages in the cloud without slowing down your home server.</p>
-        </details>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer container">
-        <p>COMICS NOW! v3.1.0 — Released under the AGPL-3.0 License • <a href="https://github.com/ComicsNow/comics-now" class="text-cream">GitHub Repository</a> • <a href="https://www.npmjs.com/package/comics-now" class="text-cream">npm Package</a> • <a href="https://hub.docker.com/r/comicsnowdev/comics-now" class="text-cream">Docker Hub</a> • <a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="kofi-footer-link"><img src="assets/kofi-favicon.avif" alt="Ko-fi" class="kofi-logo" width="16" height="16" loading="lazy"> Support on Ko-fi</a></p>
-        <p>GVE NOW! v1.1.4 — Released under the AGPL-3.0 License • <a href="https://github.com/ComicsNow/gve-now-editor" class="text-cream">GitHub Repository</a> • <a href="https://www.npmjs.com/package/gve-now" class="text-cream">npm Package</a> • <a href="https://hub.docker.com/r/comicsnowdev/gve-now" class="text-cream">Docker Hub</a></p>
+  <footer class="footer">
+    <div class="wrap footer-inner">
+      <p class="kofi-line"><a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="kofi-link"><img src="assets/kofi-favicon.avif" alt="" width="16" height="16" loading="lazy"> Support on Ko-fi</a></p>
+      <div class="indicia">
+        <p class="indicia-line"><span class="indicia-brand">COMICS NOW!</span> No. 3.1.0. Self-hosted comic server, published under the AGPL-3.0 license.</p>
+        <p class="indicia-links">
+          <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/comics-now" target="_blank" rel="noopener">npm</a>
+          <a href="https://hub.docker.com/r/comicsnowdev/comics-now" target="_blank" rel="noopener">Docker Hub</a>
+        </p>
+      </div>
+      <div class="indicia">
+        <p class="indicia-line"><span class="indicia-brand">GVE NOW!</span> No. 1.1.4. Companion visual editor, published under the AGPL-3.0 license.</p>
+        <p class="indicia-links">
+          <a href="https://github.com/ComicsNow/gve-now-editor" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://www.npmjs.com/package/gve-now" target="_blank" rel="noopener">npm</a>
+          <a href="https://hub.docker.com/r/comicsnowdev/gve-now" target="_blank" rel="noopener">Docker Hub</a>
+        </p>
+      </div>
+      <p class="colophon">Set in Bungee, Newsreader, Archivo and DM Mono. Printed in your browser, 2026.</p>
+    </div>
   </footer>
 
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>
