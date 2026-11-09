@@ -828,6 +828,10 @@ main:focus {
   line-height: 1.4;
 }
 
+.zoom-cta {
+  margin-block-start: 0.75rem;
+}
+
 .zoom-demo figcaption span:last-child {
   font-family: var(--font-mono);
   font-size: 0.72rem;
