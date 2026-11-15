@@ -907,7 +907,7 @@
     const bar = document.createElement('div');
     bar.id = 'cn-standalone-demo-bar';
     bar.style.cssText =
-      'position:fixed;top:0;left:0;right:0;z-index:40;background:#15120e;border-bottom:2px solid #fb4d3d;padding:calc(6px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left));display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.6);';
+      'position:fixed;top:0;left:0;right:0;z-index:1200;background:#15120e;border-bottom:2px solid #fb4d3d;padding:calc(6px + env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 6px max(14px, env(safe-area-inset-left));display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;font-family:system-ui,-apple-system,sans-serif;box-shadow:0 4px 16px rgba(0,0,0,0.6);';
 
     const left = document.createElement('div');
     left.style.cssText = 'display:flex;flex-wrap:wrap;align-items:center;gap:6px;';
@@ -983,6 +983,13 @@
       const barStyles = document.createElement('style');
       barStyles.id = 'cn-demo-bar-styles';
       barStyles.textContent = `
+        #reading-list-modal,
+        #settings-modal,
+        #ct-modal,
+        #mgmt-confirm-modal,
+        #fullscreen-viewer {
+          top: var(--cn-demo-bar-height, 0px) !important;
+        }
         @media (max-width: 640px) {
           #cn-standalone-demo-bar {
             padding: calc(4px + env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) 4px max(8px, env(safe-area-inset-left)) !important;
@@ -1012,6 +1019,7 @@
 
     const syncReaderDemoBarSpace = () => {
       const height = Math.ceil(bar.getBoundingClientRect().height);
+      document.documentElement.style.setProperty('--cn-demo-bar-height', height + 'px');
       document.body.style.paddingTop = height + 8 + 'px';
     };
     syncReaderDemoBarSpace();
@@ -1033,7 +1041,7 @@
       runDemoAction(initialMode, 'boot').finally(() => cnEmitEntry(initialMode));
     }
   }, 100);
-  setTimeout(() => clearInterval(bootPoll), 8000);
+  setTimeout(() => clearInterval(bootPoll), 30000);
 
   window.addEventListener('message', async (event) => {
     const data = event.data;

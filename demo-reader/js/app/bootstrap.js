@@ -143,9 +143,13 @@ export async function registerServiceWorker(config) {
  * Phase 3: Storage and database initialization
  */
 export async function initAppStorage() {
-  // 4) App init - prioritize offline data
+  // 4) App init - prioritize offline data (gracefully continue if IndexedDB is blocked)
   if (typeof appGlobal.openOfflineDB === 'function') {
-    await appGlobal.openOfflineDB();
+    try {
+      await appGlobal.openOfflineDB();
+    } catch (error) {
+      console.warn('[APP] Offline DB unavailable, continuing without IndexedDB:', error);
+    }
   }
   if (typeof appGlobal.getDeviceLibraries === 'function') {
     try {

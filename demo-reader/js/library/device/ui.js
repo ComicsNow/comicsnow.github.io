@@ -42,8 +42,13 @@ const safeRaw = typeof raw === 'function' ? raw : (str) => ({ __isRawHtml: true,
  * Render local libraries as cards in the root folder view
  */
 export async function appendDeviceLibraryCards(container) {
-  const libraries = await getDeviceLibraries();
-  if (libraries.length === 0) return;
+  let libraries = [];
+  try {
+    libraries = await getDeviceLibraries();
+  } catch {
+    return;
+  }
+  if (!Array.isArray(libraries) || libraries.length === 0) return;
 
   for (const lib of libraries) {
     const comics = await getDeviceComics(lib.id);
