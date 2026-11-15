@@ -118,9 +118,12 @@ export function triggerZoomAtClient(clientX, clientY) {
     const manualBox = registry.getManualOverrideBox?.();
     const recentlyDismissed = (now - (global.lastManualOverrideDismissAt || 0)) <= (FS_DOUBLE_TAP_MS + 100);
     const activeMode = registry.getActiveMode?.();
+    const comicId = global.currentComic?.id != null ? String(global.currentComic.id).slice(0, 120) : '';
+    const pageNum = Math.max(1, Number(global.currentPageIndex || 0) + 1);
     if (manualBox || recentlyDismissed) {
       registry.setManualOverrideBox(null);
       activeMode?.onPageRendered?.();
+      window.cnTrack?.('reader-guided-zoom', { mode: activeModeName || 'unknown', action: 'manual-out', comic_id: comicId, page: pageNum });
     } else {
       activeMode?.onPageRendered?.();
       const rect = img.getBoundingClientRect();
@@ -136,6 +139,7 @@ export function triggerZoomAtClient(clientX, clientY) {
       const x = Math.max(0, Math.min(maxX, Math.round(cx - boxW / 2)));
       const y = Math.max(0, Math.min(maxY, Math.round(cy - boxH / 2)));
       registry.setManualOverrideBox([x, y, boxW, boxH]);
+      window.cnTrack?.('reader-guided-zoom', { mode: activeModeName || 'unknown', action: 'manual-in', comic_id: comicId, page: pageNum });
     }
     if (typeof gv.refreshRender === 'function') {
       gv.refreshRender();
@@ -153,7 +157,8 @@ export function triggerZoomAtClient(clientX, clientY) {
   const ratioX = clamp(rect.width ? (clientX - rect.left) / rect.width : 0.5, 0, 1);
   const ratioY = clamp(rect.height ? (clientY - rect.top) / rect.height : 0.5, 0, 1);
 
-  if (!global.isFullscreenZoomed) {
+  const zoomingIn = !global.isFullscreenZoomed;
+  if (zoomingIn) {
     if (typeof applyFullscreenZoom === 'function') {
       applyFullscreenZoom(2, ratioX, ratioY);
     } else {
@@ -164,6 +169,12 @@ export function triggerZoomAtClient(clientX, clientY) {
     global.resetFullscreenZoom?.();
   }
   syncZoomToggleButton();
+  window.cnTrack?.('reader-manual-zoom', {
+    scale: zoomingIn ? 2 : 1,
+    action: zoomingIn ? 'in' : 'out',
+    comic_id: global.currentComic?.id != null ? String(global.currentComic.id).slice(0, 120) : '',
+    page: Math.max(1, Number(global.currentPageIndex || 0) + 1)
+  });
 }
 
 export function handleFullscreenPointerUpForDblTap(event) {

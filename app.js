@@ -276,6 +276,30 @@
     );
     measureScroll();
 
+    var heroArt = document.querySelector('.hero-art');
+    if (heroArt) {
+      heroArt.addEventListener('click', function (event) {
+        if (event.target && event.target.closest && event.target.closest('a, button')) return;
+        var targetName = event.target && event.target.closest && event.target.closest('.phone--hero')
+          ? 'phone'
+          : event.target && event.target.closest && event.target.closest('.page-sheet')
+            ? 'page'
+            : 'frame';
+        track('hero-art-click', { target: targetName });
+      });
+    }
+
+    var compWrap = document.querySelector('#comparison .table-wrap');
+    if (compWrap) {
+      var compScrolled = false;
+      compWrap.addEventListener('scroll', function () {
+        if (!compScrolled && compWrap.scrollLeft > 12) {
+          compScrolled = true;
+          track('comparison-table-scroll', {});
+        }
+      }, { passive: true });
+    }
+
     window.addEventListener('pagehide', function () {
       if (analyticsState.exitSent) return;
       analyticsState.exitSent = true;
@@ -687,6 +711,7 @@
     tabs.forEach(function (tab, index) {
       tab.addEventListener('click', function () {
         activate(tab, false);
+        track('install-tab-switch', { tab: tab.getAttribute('data-install-tab') || 'compose', method: 'mouse' });
       });
 
       tab.addEventListener('keydown', function (event) {
@@ -726,6 +751,13 @@
       resetTimer = window.setTimeout(function () {
         copyBtn.textContent = 'Copy';
       }, 2000);
+    }
+
+    if (code) {
+      code.addEventListener('copy', function () {
+        analyticsState.copies++;
+        track('copy-install-command', { tab: activeInstallTab(), result: 'selection_copy' });
+      });
     }
 
     copyBtn.addEventListener('click', function () {

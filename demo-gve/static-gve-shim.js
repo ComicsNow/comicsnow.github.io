@@ -15,6 +15,9 @@
     items_added: 0,
     comics_opened: 0,
     mode_changes: 0,
+    boxes_deleted: 0,
+    boxes_edited: 0,
+    reorders: 0,
     pagesTouched: new Set()
   };
   const COUNTER_KEYS = new Set([
@@ -26,7 +29,10 @@
     'autosorts',
     'items_added',
     'comics_opened',
-    'mode_changes'
+    'mode_changes',
+    'boxes_deleted',
+    'boxes_edited',
+    'reorders'
   ]);
   const analyticsQueue = [];
   let pageviewSent = false;
@@ -194,11 +200,11 @@
     cnTrack('gve-entry', payload);
   }
 
-  function cnEmitExit() {
+  function cnEmitExit(destOverride) {
     if (exitSent) return;
     exitSent = true;
     cnTrack('gve-exit', {
-      dest: safeToken(pendingDest, 'pagehide'),
+      dest: safeToken(destOverride || pendingDest, 'pagehide'),
       dwell_s: Math.max(0, Math.round((Date.now() - analyticsState.startedAt) / 1000)),
       saves: analyticsState.saves,
       exports: analyticsState.exports,
@@ -209,7 +215,10 @@
       items_added: analyticsState.items_added,
       comics_opened: analyticsState.comics_opened,
       pages_touched: analyticsState.pagesTouched.size,
-      mode_changes: analyticsState.mode_changes
+      mode_changes: analyticsState.mode_changes,
+      boxes_deleted: analyticsState.boxes_deleted,
+      boxes_edited: analyticsState.boxes_edited,
+      reorders: analyticsState.reorders
     });
   }
 
@@ -235,18 +244,23 @@
 
       if (target.classList.contains('undo')) {
         window.cnGveCount('undo_count');
+        cnTrack('gve-undo', { method: 'button' });
         return;
       }
       if (target.classList.contains('redo')) {
         window.cnGveCount('redo_count');
+        cnTrack('gve-redo', { method: 'button' });
         return;
       }
       if (target.classList.contains('autosort')) {
         window.cnGveCount('autosorts');
+        cnTrack('gve-autosort', {});
         return;
       }
       if (target.classList.contains('mode-btn')) {
-        cnTrack('gve-mode', { mode: safeToken(target.dataset.mode, 'unknown') });
+        if (!target.classList.contains('active')) {
+          cnTrack('gve-mode', { mode: safeToken(target.dataset.mode, 'unknown'), source: 'toolbar' });
+        }
         return;
       }
       if (target.classList.contains('export')) {
@@ -278,9 +292,12 @@
       if (event.target && event.target.isContentEditable) return;
       const key = event.key ? event.key.toLowerCase() : '';
       if (key === 'z') {
-        window.cnGveCount(event.shiftKey ? 'redo_count' : 'undo_count');
+        const isRedo = !!event.shiftKey;
+        window.cnGveCount(isRedo ? 'redo_count' : 'undo_count');
+        cnTrack(isRedo ? 'gve-redo' : 'gve-undo', { method: 'keyboard' });
       } else if (key === 'y') {
         window.cnGveCount('redo_count');
+        cnTrack('gve-redo', { method: 'keyboard' });
       }
     },
     true
@@ -292,7 +309,7 @@
     flushAnalytics();
   }
   window.addEventListener('load', flushAnalytics);
-  window.addEventListener('pagehide', cnEmitExit);
+  window.addEventListener('pagehide', () => cnEmitExit());
   // If the demo boot fails, still record one pageview and an entry event.
   window.setTimeout(cnEmitEntry, 3000);
 
@@ -619,6 +636,7 @@
     backLink.addEventListener('click', (event) => {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       setPendingDest('website');
+      cnEmitExit('website');
     });
     leftGroup.appendChild(backLink);
 
@@ -660,6 +678,7 @@
       } catch (_e) {}
       writeEntryMarker('reader', mode, 'gve-bar', 'gve');
       setPendingDest('reader');
+      cnEmitExit('reader');
     });
 
     const buttons = {};

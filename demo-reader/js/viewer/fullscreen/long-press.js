@@ -59,6 +59,13 @@ export function makeLongPressHandlers(dir) {
       if (typeof navigator !== 'undefined' && navigator.vibrate) {
         try { navigator.vibrate(15); } catch (_) {}
       }
+      if (typeof window !== 'undefined' && typeof window.cnTrack === 'function') {
+        window.cnTrack('reader-page-control', {
+          control: dir === -1 ? 'hotspot-left-hold' : 'hotspot-right-hold',
+          comic_id: global.currentComic?.id != null ? String(global.currentComic.id).slice(0, 120) : '',
+          page: Math.max(1, Number(global.currentPageIndex || 0) + 1)
+        });
+      }
       global.hideFullscreenControls?.();
       if (global.isContinuousMode) {
         if (dir === -1 && typeof global.scrollToPreviousPage === 'function') {
@@ -111,6 +118,13 @@ export function makeLongPressHandlers(dir) {
       pendingSideNavTimer = null;
       if (global.isFullscreenZoomed) return;
       if (global.isFullImageMode) return;
+      if (typeof window !== 'undefined' && typeof window.cnTrack === 'function') {
+        window.cnTrack('reader-page-control', {
+          control: dir === -1 ? 'hotspot-left' : 'hotspot-right',
+          comic_id: global.currentComic?.id != null ? String(global.currentComic.id).slice(0, 120) : '',
+          page: Math.max(1, Number(global.currentPageIndex || 0) + 1)
+        });
+      }
       if (global.isContinuousMode) {
         if (dir === -1 && typeof global.scrollToPreviousPage === 'function') {
           global.scrollToPreviousPage();

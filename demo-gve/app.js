@@ -1716,21 +1716,36 @@
         }
         form.addEventListener("submit", (e) => {
           e.preventDefault();
+          if (window.cnTrack) {
+            window.cnTrack("gve-library-search", {
+              query_length: input.value.trim().length,
+              only_guided: !!onlyGuided.checked
+            });
+          }
           page = 0;
           refresh();
         });
         onlyGuided.addEventListener("change", () => {
+          if (window.cnTrack) {
+            window.cnTrack("gve-library-filter", { only_guided: !!onlyGuided.checked });
+          }
           page = 0;
           refresh();
         });
         prevBtn.addEventListener("click", () => {
           if (page > 0) {
             page -= 1;
+            if (window.cnTrack) {
+              window.cnTrack("gve-library-page", { dir: "prev", page: page + 1 });
+            }
             refresh();
           }
         });
         nextBtn.addEventListener("click", () => {
           page += 1;
+          if (window.cnTrack) {
+            window.cnTrack("gve-library-page", { dir: "next", page: page + 1 });
+          }
           refresh();
         });
         refresh();
@@ -1777,7 +1792,14 @@
             radio.value = candidate.comic.id;
             radio.checked = state.selectedId === candidate.comic.id;
             radio.addEventListener("change", () => {
-              if (radio.checked) state.selectedId = candidate.comic.id;
+              if (radio.checked) {
+                state.selectedId = candidate.comic.id;
+                if (window.cnTrack) {
+                  window.cnTrack("gve-import-select", {
+                    comic_id: String(candidate.comic.id || "").slice(0, 120)
+                  });
+                }
+              }
             });
             const label = document.createElement("span");
             label.className = "candidate-label";
@@ -1811,7 +1833,10 @@
             radio.value = mode;
             radio.checked = state.mode === mode;
             radio.addEventListener("change", () => {
-              if (radio.checked) state.mode = mode;
+              if (radio.checked) {
+                state.mode = mode;
+                if (window.cnTrack) window.cnTrack("gve-import-mode", { mode });
+              }
             });
             label.append(radio, document.createTextNode(mode === "attach" ? " attach (keep other pages)" : " replace (wipe existing sidecar pages)"));
             modes.appendChild(label);
@@ -1834,7 +1859,15 @@
           button.addEventListener("click", async () => {
             results.textContent = "";
             try {
+              const qLen = input.value.trim().length;
               const data = await api2.listComics({ q: input.value.trim() });
+              if (window.cnTrack) {
+                window.cnTrack("gve-import-search", {
+                  query_length: qLen,
+                  results: (data.comics || []).length,
+                  result: "ok"
+                });
+              }
               for (const comic of data.comics || []) {
                 const row = document.createElement("div");
                 row.className = "manual-row";
@@ -1855,8 +1888,20 @@
                     };
                     state.candidates = [entry, ...state.candidates.filter((c) => c.comic.id !== comic.id)];
                     state.selectedId = comic.id;
+                    if (window.cnTrack) {
+                      window.cnTrack("gve-import-pick", {
+                        comic_id: String(comic.id || "").slice(0, 120),
+                        result: "ok"
+                      });
+                    }
                     renderConfirm();
                   } catch (err) {
+                    if (window.cnTrack) {
+                      window.cnTrack("gve-import-pick", {
+                        comic_id: String(comic.id || "").slice(0, 120),
+                        result: "error"
+                      });
+                    }
                     status.textContent = err.message;
                   }
                 });
@@ -1864,6 +1909,13 @@
                 results.appendChild(row);
               }
             } catch (err) {
+              if (window.cnTrack) {
+                window.cnTrack("gve-import-search", {
+                  query_length: input.value.trim().length,
+                  results: 0,
+                  result: "error"
+                });
+              }
               status.textContent = err.message;
             }
           });
@@ -1910,7 +1962,14 @@
             const open = document.createElement("button");
             open.type = "button";
             open.textContent = "Open in editor";
-            open.addEventListener("click", () => onOpenEditor(state.selectedId));
+            open.addEventListener("click", () => {
+              if (window.cnTrack) {
+                window.cnTrack("gve-import-open-editor", {
+                  comic_id: String(state.selectedId || "").slice(0, 120)
+                });
+              }
+              onOpenEditor(state.selectedId);
+            });
             result.appendChild(open);
           }
           content.appendChild(result);
@@ -1946,8 +2005,22 @@
             state.selectedId = state.candidates.length ? state.candidates[0].comic.id : null;
             state.mode = "attach";
             status.textContent = "";
+            if (window.cnTrack) {
+              window.cnTrack("gve-import-score", {
+                result: "ok",
+                candidates: state.candidates.length,
+                type: String(data && data.type ? data.type : "unknown").slice(0, 32)
+              });
+            }
             renderConfirm();
           } catch (err) {
+            if (window.cnTrack) {
+              window.cnTrack("gve-import-score", {
+                result: "error",
+                candidates: 0,
+                type: String(data && data.type ? data.type : "unknown").slice(0, 32)
+              });
+            }
             status.textContent = err.message;
           }
         }
@@ -1958,6 +2031,13 @@
             const data = JSON.parse(await file.text());
             await loadFile(data);
           } catch (err) {
+            if (window.cnTrack) {
+              window.cnTrack("gve-import-score", {
+                result: "invalid-file",
+                candidates: 0,
+                type: "unknown"
+              });
+            }
             status.textContent = `Could not read file: ${err.message}`;
           }
         });
@@ -2070,6 +2150,7 @@
           const comicsNowRoot = input.value.trim();
           if (!comicsNowRoot) {
             setStatus("Enter the comics-now install path first.", "error");
+            if (window.cnTrack) window.cnTrack("gve-settings-save", { result: "invalid" });
             return;
           }
           restart.hidden = true;
@@ -2081,8 +2162,10 @@
             if (warnings.some((warning) => warning.includes("COMICS_NOW_ROOT"))) showEnvNotice();
             setStatus(warnings.length ? warnings.join("\n") : "Saved.", warnings.length ? "warn" : "ok");
             showRestart(res.message);
+            if (window.cnTrack) window.cnTrack("gve-settings-save", { result: "ok", warnings: warnings.length });
           } catch (err) {
             setStatus(`Save failed: ${err.message}`, "error");
+            if (window.cnTrack) window.cnTrack("gve-settings-save", { result: "error" });
           }
         }
         save2.addEventListener("click", saveSettings);
@@ -2192,6 +2275,7 @@
   }
   function handleSelect(id, { additive } = {}) {
     if (!session) return;
+    const hadSelection = session.selection.size > 0;
     if (!id) session.selection.clear();
     else if (additive) {
       if (session.selection.has(id)) session.selection.delete(id);
@@ -2201,6 +2285,12 @@
     }
     stage.setSelected(session.selection);
     renderInspectorPanel();
+    if (window.cnTrack && (id || hadSelection)) {
+      window.cnTrack("gve-select", {
+        action: !id ? "clear" : additive ? "toggle" : "select",
+        count: session.selection.size
+      });
+    }
   }
   function shapeFor(item, box) {
     return item && item.points ? remapPoints(item.points, item.box, box) : void 0;
@@ -2221,6 +2311,12 @@
     session.selection = /* @__PURE__ */ new Set([id]);
     stage.setSelected(session.selection);
     renderInspectorPanel();
+    if (window.cnTrack) {
+      window.cnTrack("gve-item-add", {
+        kind: String(kind || "unknown"),
+        total: store.getPage()?.items?.length || 0
+      });
+    }
   }
   function handleUpdateBox(id, box) {
     const page = store.getPage();
@@ -2229,15 +2325,18 @@
   }
   function handleBeginEdit() {
     pushSnapshot();
+    if (window.cnGveCount) window.cnGveCount("boxes_edited");
   }
   function handleSetNumber(id, number) {
     if (!session) return;
     pushSnapshot();
     store.moveItem(id, number - 1);
+    if (window.cnGveCount) window.cnGveCount("reorders");
+    if (window.cnTrack) window.cnTrack("gve-reorder", { method: "badge" });
   }
   function setMode(mode) {
     if (!session) return;
-    if (window.cnGveCount) window.cnGveCount("mode_changes");
+    if (session.mode !== mode && window.cnGveCount) window.cnGveCount("mode_changes");
     session.mode = mode;
     stage.setMode(mode);
     for (const btn of el.toolbar.querySelectorAll(".mode-btn")) {
@@ -2258,11 +2357,14 @@
   }
   function deleteSelection() {
     if (!session || !session.selection.size) return;
+    const count = session.selection.size;
     pushSnapshot();
     store.removeItems([...session.selection]);
     session.selection.clear();
     stage.setSelected(session.selection);
     renderInspectorPanel();
+    if (window.cnGveCount) window.cnGveCount("boxes_deleted");
+    if (window.cnTrack) window.cnTrack("gve-item-delete", { count });
   }
   function autoSort() {
     const page = store.getPage();
@@ -2303,15 +2405,20 @@
       onMove: (id, delta) => {
         pushSnapshot();
         store.moveItemBy(id, delta);
+        if (window.cnGveCount) window.cnGveCount("reorders");
+        if (window.cnTrack) window.cnTrack("gve-reorder", { method: delta < 0 ? "move-up" : "move-down" });
       },
       onDrop: (id, toIndex) => {
         pushSnapshot();
         store.moveItem(id, toIndex);
+        if (window.cnGveCount) window.cnGveCount("reorders");
+        if (window.cnTrack) window.cnTrack("gve-reorder", { method: "drag" });
       },
       onSetNumber: handleSetNumber,
       onSetCaret: (index) => {
         if (session) session.caret = index;
         renderOrder();
+        if (window.cnTrack) window.cnTrack("gve-caret-set", { index: Math.max(0, Number(index || 0)) });
       }
     });
   }
@@ -2323,10 +2430,12 @@
     renderInspector(el.inspector, {
       item,
       badge,
-      onBoxChange: (box) => {
+      onBoxChange: (box, field) => {
         if (!item) return;
         pushSnapshot();
         store.updateItem(item.id, box, shapeFor(item, box));
+        if (window.cnGveCount) window.cnGveCount("boxes_edited");
+        if (window.cnTrack) window.cnTrack("gve-inspector-edit", { field: String(field || "box") });
       },
       onDelete: deleteSelection
     });
@@ -2411,7 +2520,7 @@
       make("export", "Export", () => window.open(api.exportUrl(session.comicId), "_blank")),
       make("reset", "Reset sidecar", resetSidecar),
       make("back", "\u2190 Library", () => {
-        if (confirmLeave()) showView("library");
+        if (confirmLeave("library")) showView("library");
       })
     );
     el.toolbar.append(title, modes, actions);
@@ -2544,8 +2653,11 @@
       }
     }
   }
-  function confirmLeave() {
-    return !store.isDirty() || window.confirm("Discard unsaved changes?");
+  function confirmLeave(dest) {
+    if (!store.isDirty()) return true;
+    const ok = window.confirm("Discard unsaved changes?");
+    if (!ok && window.cnTrack) window.cnTrack("gve-nav-cancel", { dest: String(dest || "unknown") });
+    return ok;
   }
   function boot() {
     createLibraryView(el.library, {
@@ -2556,13 +2668,13 @@
     createImportView(el.import, { api, onOpenEditor: (id) => openComic(id, "import") });
     const settingsView = createSettingsView(el.settings, { api });
     el.navLibrary.addEventListener("click", () => {
-      if (confirmLeave()) showView("library");
+      if (confirmLeave("library")) showView("library");
     });
     el.navImport.addEventListener("click", () => {
-      if (confirmLeave()) showView("import");
+      if (confirmLeave("import")) showView("import");
     });
     el.navSettings.addEventListener("click", () => {
-      if (!confirmLeave()) return;
+      if (!confirmLeave("settings")) return;
       showView("settings");
       settingsView.refresh();
     });
@@ -2583,7 +2695,11 @@
           return;
         }
         if (!session) return;
+        const prevMode = session.mode;
         setMode("select");
+        if (prevMode !== "select" && window.cnTrack) {
+          window.cnTrack("gve-mode", { mode: "select", source: "escape" });
+        }
         session.selection.clear();
         stage.setSelected(session.selection);
         renderInspectorPanel();

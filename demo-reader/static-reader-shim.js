@@ -262,6 +262,11 @@
     return comic && comic.id != null ? String(comic.id).slice(0, 120) : '';
   }
 
+  function currentPageNum() {
+    const idx = window.currentPageIndex;
+    return idx != null && Number.isFinite(Number(idx)) ? Math.max(1, Number(idx) + 1) : 1;
+  }
+
   const FULLSCREEN_CONTROLS = {
     'fullscreen-orientation-btn': {
       control: 'orientation',
@@ -298,51 +303,824 @@
     return safeToken(String(window.currentView || ''), 'library');
   }
 
+  function classifyContextMenuAction(text) {
+    const t = String(text || '').toLowerCase();
+    if (t.includes('bulk mark')) return 'bulk-mark-read';
+    if (t.includes('unread')) return 'mark-unread';
+    if (t.includes('read')) return 'mark-read';
+    if (t.includes('download')) return 'download';
+    if (t.includes('manga mode')) return 'manga-toggle';
+    if (t.includes('continuous mode')) return 'continuous-toggle';
+    if (t.includes('force re-run guided') || t.includes('re-run guided')) return 'guided-rerun';
+    if (t.includes('guided detection')) return 'guided-run';
+    if (t.includes('reading list')) return 'add-to-reading-list';
+    if (t.includes('remove') || t.includes('delete')) return 'delete';
+    return 'other';
+  }
+
+  function resolveCardScope(el) {
+    if (!el || !el.closest) return 'comic';
+    if (el.closest('#root-folder-list-container')) return 'library';
+    if (el.closest('#folder-list-container')) return 'folder';
+    if (el.closest('#publisher-list-container')) return 'publisher';
+    if (el.closest('#series-list-container')) return 'series';
+    if (el.closest('#smart-list-container')) return 'smart';
+    if (el.closest('#search-results-container')) return 'search';
+    return 'comic';
+  }
+
+  const INLINE_TOGGLES = {
+    'fit-height-btn': {
+      control: 'inline-fit-height',
+      state: (btn) => (btn.classList.contains('active') || btn.getAttribute('aria-pressed') === 'true' ? 'on' : 'off')
+    },
+    'orientation-toggle-btn': {
+      control: 'inline-orientation',
+      state: (btn) =>
+        btn.getAttribute('aria-pressed') === 'true' || btn.classList.contains('landscape')
+          ? 'landscape'
+          : 'portrait'
+    },
+    'manga-mode-btn': {
+      control: 'inline-manga-mode',
+      state: (btn) => (btn.classList.contains('active') ? 'on' : 'off')
+    }
+  };
+
+  const PAGE_CONTROL_IDS = new Set([
+    'prev-page-btn',
+    'next-page-btn',
+    'prev-page-btn-bottom',
+    'next-page-btn-bottom',
+    'fullscreen-prev-page-btn',
+    'fullscreen-next-page-btn'
+  ]);
+
+  const PAGE_JUMP_IDS = new Set([
+    'page-counter',
+    'page-counter-bottom',
+    'fullscreen-page-counter'
+  ]);
+
+  const GRID_OPEN_IDS = new Set([
+    'page-grid-btn',
+    'page-grid-btn-bottom',
+    'fullscreen-page-grid-btn',
+    'reader-filmstrip-grid-btn'
+  ]);
+
+  const SMART_SCOPE_BTNS = {
+    'latest-added-btn': 'latest',
+    'downloaded-btn': 'downloaded',
+    'guided-smart-list-btn': 'guided',
+    'dynamic-manga-filter-btn': 'manga',
+    'dynamic-reading-list-filter-btn': 'reading-list'
+  };
+
+  const METADATA_ACTION_IDS = {
+    'clear-staged-sources-btn': 'clear-staged',
+    'synthesize-staged-sources-btn': 'synthesize-staged',
+    'cv-prev': 'cv-prev',
+    'cv-next': 'cv-next'
+  };
+
+  const SETTINGS_ACTION_IDS = {
+    'directory-modal-close': 'directory-close',
+    'directory-cancel-btn': 'directory-cancel',
+    'directory-confirm-btn': 'directory-confirm',
+    'add-library-btn': 'add-library',
+    'scan-button': 'scan-library',
+    'full-scan-button': 'full-scan-library',
+    'clear-downloads-btn': 'clear-downloads',
+    'comics-defaults-save-btn': 'save-comics-defaults',
+    'refresh-devices-btn': 'refresh-devices',
+    'refresh-users-btn': 'refresh-users',
+    'guided-run-btn': 'guided-run',
+    'guided-cancel-current-btn': 'guided-cancel-current',
+    'guided-cancel-btn': 'guided-cancel-all',
+    'guided-modal-refresh-btn': 'guided-modal-refresh',
+    'guided-modal-banner-setup-btn': 'guided-modal-banner-setup',
+    'guided-modal-test-btn': 'guided-modal-test',
+    'guided-modal-setup-btn': 'guided-modal-setup',
+    'guided-log-clear': 'guided-log-clear'
+  };
+
+  const TAGGER_ACTION_IDS = {
+    'ct-close-btn': 'close',
+    'ct-rescan-unmatched-btn': 'rescan-unmatched',
+    'ct-rescan-xml-btn': 'rescan-xml',
+    'ct-run-btn': 'run',
+    'ct-cancel-btn': 'cancel',
+    'ct-clear-output': 'clear-output',
+    'ct-grab-btn': 'grab',
+    'ct-apply-btn': 'apply',
+    'ct-skip-btn': 'skip',
+    'ct-confirm-yes': 'confirm-yes',
+    'ct-confirm-no': 'confirm-no',
+    'ct-migrate-btn': 'migrate',
+    'ct-save-btn': 'save-settings',
+    'ct-clear-history-btn': 'clear-history',
+    'ct-gemini-key-toggle': 'gemini-key-toggle',
+    'ct-gemini-save-btn': 'gemini-save',
+    'ct-refresh-logs-btn': 'refresh-logs',
+    'rename-cbz-btn': 'rename-cbz',
+    'rename-clear-output': 'rename-clear-output',
+    'move-comics-btn': 'move-comics',
+    'move-clear-output': 'move-clear-output',
+    'errors-refresh-btn': 'errors-refresh',
+    'save-naming-rules-btn': 'save-naming-rules',
+    'rename-library-btn': 'rename-library',
+    'add-folder-level-btn': 'add-folder-level',
+    'save-folder-rules-btn': 'save-folder-rules',
+    'move-library-btn': 'move-library',
+    'mgmt-confirm-cancel-btn': 'mgmt-confirm-cancel',
+    'mgmt-confirm-proceed-btn': 'mgmt-confirm-proceed',
+    'gemini-modal-disagree-btn': 'gemini-modal-disagree',
+    'gemini-modal-save-btn': 'gemini-modal-save'
+  };
+
+  const RL_ACTION_IDS = {
+    'reading-list-close-btn': 'close',
+    'create-reading-list-btn': 'create-open',
+    'export-all-lists-btn': 'export-all',
+    'import-lists-btn': 'import-open',
+    'edit-reading-lists-btn': 'edit-lists-toggle',
+    'save-reading-lists-order-btn': 'save-lists-order',
+    'cancel-reading-lists-edit-btn': 'cancel-lists-edit',
+    'back-to-lists-btn': 'back-to-lists',
+    'download-all-list-btn': 'download-all',
+    'export-list-btn': 'export-list',
+    'edit-list-btn': 'edit-list-toggle',
+    'save-order-btn': 'save-list-order',
+    'cancel-edit-btn': 'cancel-list-edit',
+    'add-to-list-close-btn': 'add-modal-close',
+    'add-to-list-cancel-btn': 'add-modal-cancel',
+    'add-to-list-create-new-btn': 'add-modal-create-open'
+  };
+
+  const SYNC_ACTION_IDS = new Set([
+    'sync-keep-current',
+    'sync-accept',
+    'sync-ignore',
+    'sync-cancel',
+    'sync-notification-close',
+    'sync-notification-accept',
+    'sync-notification-dismiss'
+  ]);
+
+  function previewCardPage(card) {
+    if (!card) return 0;
+    const numEl = card.querySelector('.comic-page-preview-number, .comic-filmstrip-number');
+    const parsed = numEl ? parseInt(numEl.textContent, 10) : NaN;
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    if (card.parentElement && card.parentElement.children) {
+      const idx = Array.prototype.indexOf.call(card.parentElement.children, card);
+      if (idx >= 0) return idx + 1;
+    }
+    return 0;
+  }
+
   document.addEventListener(
     'click',
     (event) => {
       if (!event.isTrusted) return;
-      const target = event.target && event.target.closest ? event.target.closest('button, [role="tab"]') : null;
-      if (!target || target.disabled) return;
-      const id = target.id || '';
+      const rawTarget = event.target;
+      if (!rawTarget || !rawTarget.closest) return;
+      if (rawTarget.closest('#cn-standalone-demo-bar')) return;
 
-      if (FULLSCREEN_CONTROLS[id]) {
-        const entry = FULLSCREEN_CONTROLS[id];
-        const comicId = currentComicId();
+      const link = rawTarget.closest('a[href]');
+      if (link && link.id === 'kofi-settings-link') {
+        cnTrack('outbound-click', { host: 'ko-fi.com', path: '/comicsnow', source: 'reader-settings' });
+        return;
+      }
+
+      const menuItem = rawTarget.closest('.comic-context-menu-item');
+      if (menuItem && !menuItem.classList.contains('disabled')) {
+        cnTrack('reader-context-menu-action', { action: classifyContextMenuAction(menuItem.textContent) });
+        return;
+      }
+
+      const target = rawTarget.closest('button, [role="tab"]');
+      if (target && !target.disabled) {
+        const id = target.id || '';
+
+        if (FULLSCREEN_CONTROLS[id] || INLINE_TOGGLES[id]) {
+          const entry = FULLSCREEN_CONTROLS[id] || INLINE_TOGGLES[id];
+          const comicId = currentComicId();
+          window.setTimeout(() => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            cnTrack('reader-toggle', {
+              control: entry.control,
+              state: entry.state(btn),
+              comic_id: comicId
+            });
+          }, 80);
+          return;
+        }
+
+        if (target.classList.contains('download-btn')) {
+          cnTrack('reader-download-click', {
+            scope: resolveCardScope(target),
+            comic_id: target.dataset.comicId || ''
+          });
+          return;
+        }
+
+        if (target.classList.contains('status-toggle-btn')) {
+          cnTrack('reader-status-toggle', {
+            scope: resolveCardScope(target),
+            comic_id: target.dataset.comicId || ''
+          });
+          return;
+        }
+
+        if (target.classList.contains('alpha-filter-btn')) {
+          const host = target.closest('#publisher-alpha-filter, #series-alpha-filter, #comic-alpha-filter, #folder-alpha-filter');
+          const view = host && host.id ? host.id.replace('-alpha-filter', '') : viewSource();
+          cnTrack('reader-alpha-filter', {
+            view: view,
+            char: safeToken(target.dataset.letter || target.textContent, 'all')
+          });
+          return;
+        }
+
+        if (target.closest('#breadcrumb')) {
+          const btns = Array.from(document.querySelectorAll('#breadcrumb button'));
+          cnTrack('reader-breadcrumb-click', {
+            depth: Math.max(0, btns.indexOf(target)),
+            total: btns.length,
+            source: viewSource()
+          });
+          return;
+        }
+
+        if (SMART_SCOPE_BTNS[id]) {
+          const baseScope = SMART_SCOPE_BTNS[id];
+          window.setTimeout(() => {
+            const active = window.activeSmartFilter;
+            cnTrack('reader-smart-filter', {
+              scope: safeToken(active || baseScope, baseScope),
+              action: active ? 'on' : 'off'
+            });
+          }, 0);
+          return;
+        }
+
+        if (id === 'clear-search-btn') {
+          cnTrack('reader-search-clear', { source: viewSource() });
+          return;
+        }
+
+        if (id === 'logout-button') {
+          cnTrack('reader-logout-click', { source: viewSource() });
+          return;
+        }
+
+        if (id === 'viewer-tab' || id === 'metadata-tab') {
+          cnTrack('reader-tab-switch', {
+            tab: id === 'metadata-tab' ? 'metadata' : 'viewer',
+            comic_id: currentComicId()
+          });
+          return;
+        }
+
+        if (id === 'fullscreen-btn') {
+          cnTrack('reader-fullscreen-open', { comic_id: currentComicId() });
+          return;
+        }
+
+        if (id === 'fullscreen-close-btn' || id === 'fullscreen-close-btn-bottom') {
+          cnTrack('reader-fullscreen-close', {
+            control: id === 'fullscreen-close-btn-bottom' ? 'bottom-close' : 'top-close',
+            comic_id: currentComicId(),
+            page: currentPageNum()
+          });
+          return;
+        }
+
+        if (id === 'comic-summary-toggle') {
+          const comicId = currentComicId();
+          window.setTimeout(() => {
+            const summary = document.getElementById('comic-summary');
+            cnTrack('reader-summary-toggle', {
+              open: summary ? !summary.classList.contains('hidden') : false,
+              comic_id: comicId
+            });
+          }, 0);
+          return;
+        }
+
+        if (id === 'fullscreen-spread-badge') {
+          cnTrack('reader-cinema-pan', { comic_id: currentComicId(), page: currentPageNum() });
+          return;
+        }
+
+        if (PAGE_CONTROL_IDS.has(id)) {
+          cnTrack('reader-page-control', {
+            control: id,
+            comic_id: currentComicId(),
+            page: currentPageNum()
+          });
+          return;
+        }
+
+        if (PAGE_JUMP_IDS.has(id)) {
+          cnTrack('reader-page-jump', {
+            control: id,
+            comic_id: currentComicId(),
+            page: currentPageNum()
+          });
+          return;
+        }
+
+        if (
+          id === 'next-in-series-btn' ||
+          id === 'fullscreen-next-in-series-btn' ||
+          id === 'next-in-reading-list-btn' ||
+          id === 'fullscreen-next-in-reading-list-btn'
+        ) {
+          cnTrack('reader-next-comic-click', {
+            kind: id.includes('reading-list') ? 'reading-list' : 'series',
+            surface: id.startsWith('fullscreen-') ? 'fullscreen' : 'inline',
+            comic_id: currentComicId()
+          });
+          return;
+        }
+
+        if (GRID_OPEN_IDS.has(id)) {
+          cnTrack('reader-grid-open', { source: id, comic_id: currentComicId() });
+          return;
+        }
+
+        if (id === 'comic-page-grid-close') {
+          cnTrack('reader-grid-close', { method: 'button', comic_id: currentComicId() });
+          return;
+        }
+
+        if (id === 'fullscreen-filmstrip-btn' || id === 'reader-filmstrip-close-btn') {
+          const comicId = currentComicId();
+          window.setTimeout(() => {
+            const strip = document.getElementById('reader-thumbnail-filmstrip');
+            cnTrack('reader-filmstrip-toggle', {
+              source: id === 'reader-filmstrip-close-btn' ? 'close-btn' : 'toolbar',
+              open: strip ? !strip.classList.contains('hidden') : id !== 'reader-filmstrip-close-btn',
+              comic_id: comicId
+            });
+          }, 0);
+          return;
+        }
+
+        if (id === 'view-mode-grid-btn' || id === 'view-mode-compact-btn' || id === 'view-mode-dag-btn') {
+          cnTrack('reader-reading-list-view', {
+            mode: id === 'view-mode-dag-btn' ? 'dag' : id === 'view-mode-compact-btn' ? 'compact' : 'grid'
+          });
+          return;
+        }
+
+        if (target.classList.contains('rl-dag-quick-read-btn')) {
+          cnTrack('reader-dag-read', { source: 'quick-read', comic_id: target.dataset.comicId || '' });
+          return;
+        }
+        if (id === 'rl-inspector-read-btn') {
+          cnTrack('reader-dag-read', { source: 'inspector', comic_id: target.dataset.comicId || '' });
+          return;
+        }
+        if (id === 'rl-inspector-close-btn') {
+          cnTrack('reader-dag-inspector-close', {});
+          return;
+        }
+        if (target.classList.contains('rl-dag-filter-btn')) {
+          cnTrack('reader-dag-filter', { filter: safeToken(target.dataset.filter, 'all') });
+          return;
+        }
+        if (id === 'rl-dag-focus-unread-btn' || id === 'rl-dag-reset-btn') {
+          cnTrack('reader-dag-action', {
+            action: id === 'rl-dag-focus-unread-btn' ? 'focus-unread' : 'reset'
+          });
+          return;
+        }
+        if (target.classList.contains('rl-series-legend-chip')) {
+          window.setTimeout(() => {
+            cnTrack('reader-dag-series-filter', { active: target.style.opacity !== '0.4' });
+          }, 0);
+          return;
+        }
+
+        if (RL_ACTION_IDS[id]) {
+          cnTrack('reader-reading-list-action', { action: RL_ACTION_IDS[id] });
+          return;
+        }
+
+        if (target.closest('#reading-list-modal, #add-to-list-modal')) {
+          if (target.classList.contains('play-list-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'play-list' });
+            return;
+          }
+          if (target.classList.contains('dag-list-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'dag-list' });
+            return;
+          }
+          if (target.classList.contains('download-list-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'download-list' });
+            return;
+          }
+          if (target.classList.contains('read-toggle-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'read-toggle-list' });
+            return;
+          }
+          if (target.classList.contains('delete-list-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'delete-list' });
+            return;
+          }
+          if (target.classList.contains('reorder-up-btn') || target.classList.contains('reorder-down-btn')) {
+            cnTrack('reader-reading-list-action', {
+              action: target.classList.contains('reorder-up-btn') ? 'reorder-up' : 'reorder-down'
+            });
+            return;
+          }
+          if (target.classList.contains('resume-comic-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'resume-item' });
+            return;
+          }
+          if (target.classList.contains('read-comic-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'read-item' });
+            return;
+          }
+          if (target.classList.contains('mark-read-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'mark-item-read' });
+            return;
+          }
+          if (target.classList.contains('download-comic-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'download-item' });
+            return;
+          }
+          if (target.classList.contains('delete-comic-btn')) {
+            cnTrack('reader-reading-list-action', { action: 'remove-item' });
+            return;
+          }
+        }
+
+        if (id === 'metadata-subtab-cv' || id === 'metadata-subtab-form') {
+          cnTrack('reader-metadata-subtab', {
+            tab: id === 'metadata-subtab-cv' ? 'cv' : 'form',
+            comic_id: currentComicId()
+          });
+          return;
+        }
+        if (METADATA_ACTION_IDS[id]) {
+          cnTrack('reader-metadata-action', {
+            action: METADATA_ACTION_IDS[id],
+            comic_id: currentComicId()
+          });
+          return;
+        }
+        if (target.classList.contains('stage-source-btn')) {
+          cnTrack('reader-metadata-action', {
+            action: 'stage-toggle',
+            comic_id: currentComicId()
+          });
+          return;
+        }
+
+        if (id.indexOf('settings-tab-') === 0) {
+          cnTrack('reader-settings-tab', { tab: safeToken(id.slice('settings-tab-'.length), 'unknown') });
+          return;
+        }
+        if (id.indexOf('ct-tab-') === 0) {
+          cnTrack('reader-tagger-tab', { tab: safeToken(id.slice('ct-tab-'.length), 'unknown') });
+          return;
+        }
+        if (id.indexOf('mgmt-tab-') === 0) {
+          cnTrack('reader-tagger-subtab', { tab: safeToken(id.slice('mgmt-tab-'.length), 'unknown') });
+          return;
+        }
+        if (id === 'settings-button') {
+          cnTrack('reader-settings-open', { source: viewSource() });
+          return;
+        }
+        if (id === 'ct-button') {
+          cnTrack('reader-tagger-open', { source: viewSource() });
+          return;
+        }
+        if (id === 'reading-list-button') {
+          cnTrack('reader-reading-list-open', { source: viewSource() });
+          return;
+        }
+        if (id === 'downloads-button') {
+          cnTrack('reader-downloads-open', { source: viewSource() });
+          return;
+        }
+        if (SETTINGS_ACTION_IDS[id]) {
+          cnTrack('reader-settings-action', { action: SETTINGS_ACTION_IDS[id] });
+          return;
+        }
+        if (String(target.getAttribute('onclick') || '').includes('closeSettingsModal')) {
+          cnTrack('reader-settings-action', { action: 'close' });
+          return;
+        }
+        if (TAGGER_ACTION_IDS[id]) {
+          cnTrack('reader-tagger-action', { action: TAGGER_ACTION_IDS[id] });
+          return;
+        }
+        if (SYNC_ACTION_IDS.has(id)) {
+          cnTrack('reader-sync-action', { action: id });
+          return;
+        }
+
+        const dlContainer = target.closest('.dl-queue-container');
+        if (dlContainer) {
+          let action = 'other';
+          if (target.classList.contains('dl-tab')) {
+            action = 'tab-' + safeToken(target.dataset.tab || target.textContent, 'all');
+          } else if (target.classList.contains('dl-batch-btn')) {
+            action = safeToken(target.dataset.action || target.textContent, 'batch');
+          } else if (target.classList.contains('dl-retry-all-btn')) {
+            action = 'retry-all';
+          } else if (target.classList.contains('delete-download-btn')) {
+            action = 'delete-item';
+          } else if (target.classList.contains('ha')) {
+            const label = String(target.title || target.getAttribute('aria-label') || '').toLowerCase();
+            action = label.includes('close') ? 'close' : label.includes('collapse') || label.includes('expand') ? 'collapse' : 'header-action';
+          }
+          cnTrack('reader-downloads-action', { action: action });
+          return;
+        }
+
+        if (target.closest('#comic-list, #series-list, #publisher-list') && /back to/i.test(target.textContent || '')) {
+          cnTrack('reader-library-back', { source: viewSource() });
+          return;
+        }
+      }
+
+      if (rawTarget.closest('#comic-page-grid-backdrop')) {
+        cnTrack('reader-grid-close', { method: 'backdrop', comic_id: currentComicId() });
+        return;
+      }
+
+      const previewCard = rawTarget.closest('.comic-page-preview-card');
+      if (previewCard) {
+        cnTrack('reader-grid-select', { page: previewCardPage(previewCard), comic_id: currentComicId() });
+        return;
+      }
+
+      const filmstripCard = rawTarget.closest('.comic-filmstrip-card');
+      if (filmstripCard) {
+        cnTrack('reader-filmstrip-select', { page: previewCardPage(filmstripCard), comic_id: currentComicId() });
+        return;
+      }
+
+      const dagNode = rawTarget.closest('.rl-dag-node');
+      if (dagNode) {
+        const comicId = dagNode.dataset.nodeId || '';
         window.setTimeout(() => {
-          const btn = document.getElementById(id);
-          if (!btn) return;
-          cnTrack('reader-toggle', {
-            control: entry.control,
-            state: entry.state(btn),
-            comic_id: comicId
+          const insp = document.getElementById('rl-dag-inspector');
+          cnTrack('reader-dag-node-select', {
+            comic_id: comicId,
+            inspector: insp && !insp.classList.contains('hidden') ? 'open' : 'closed'
+          });
+        }, 0);
+        return;
+      }
+
+      const rlCard = rawTarget.closest('#reading-lists-container > div');
+      if (rlCard && rlCard.querySelector('.play-list-btn, .dag-list-btn')) {
+        cnTrack('reader-reading-list-action', { action: 'open-list' });
+        return;
+      }
+
+      if (rawTarget.closest('.logo-container')) {
+        cnTrack('reader-home-click', { source: viewSource() });
+        return;
+      }
+
+      if (rawTarget.closest('.add-device-library-card')) {
+        cnTrack('reader-device-library-add', {});
+        return;
+      }
+
+      const folderCard = rawTarget.closest('.folder-card');
+      if (folderCard) {
+        cnTrack('reader-library-drill', {
+          level: folderCard.closest('#root-folder-list-container') ? 'root-folder' : 'folder'
+        });
+        return;
+      }
+
+      if (rawTarget.closest('.publisher-card')) {
+        cnTrack('reader-library-drill', { level: 'publisher' });
+        return;
+      }
+
+      if (rawTarget.closest('.series-card')) {
+        cnTrack('reader-library-drill', { level: 'series' });
+        return;
+      }
+
+      if (rawTarget.closest('.reading-list-card')) {
+        cnTrack('reader-library-drill', { level: 'reading-list' });
+        return;
+      }
+
+      const candidateLi = rawTarget.closest('#cv-results li, #search-results li');
+      if (candidateLi && !rawTarget.closest('button, a, input, select')) {
+        cnTrack('reader-metadata-action', {
+          action: 'pick-candidate',
+          comic_id: currentComicId()
+        });
+        return;
+      }
+
+      if (
+        rawTarget.closest('#fullscreen-viewer') &&
+        !rawTarget.closest('#fullscreen-nav-left, #fullscreen-nav-right, #fullscreen-controls, #fullscreen-info-bar, #fullscreen-scrubber-container, #reader-thumbnail-filmstrip, #comic-page-grid-overlay, #bubble-magnifier-overlay, #fullscreen-end-of-comic-navigation')
+      ) {
+        const controls = document.getElementById('fullscreen-controls');
+        if (controls) {
+          const wasOpen = !controls.classList.contains('hidden');
+          const comicId = currentComicId();
+          const checkControlsToggle = () => {
+            const isOpen = !controls.classList.contains('hidden');
+            if (isOpen !== wasOpen) {
+              cnTrack('reader-controls-toggle', { visible: isOpen, comic_id: comicId });
+              return true;
+            }
+            return false;
+          };
+          window.setTimeout(() => {
+            if (!checkControlsToggle()) {
+              window.setTimeout(checkControlsToggle, 450);
+            }
+          }, 0);
+        }
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    'dblclick',
+    (event) => {
+      if (!event.isTrusted) return;
+      const dagNode = event.target && event.target.closest ? event.target.closest('.rl-dag-node') : null;
+      if (dagNode && !event.target.closest('button')) {
+        cnTrack('reader-dag-read', { source: 'dblclick', comic_id: dagNode.dataset.nodeId || '' });
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    'contextmenu',
+    (event) => {
+      if (!event.isTrusted) return;
+      const card = event.target && event.target.closest
+        ? event.target.closest('.comic-card, .series-card, .publisher-card, .folder-card')
+        : null;
+      if (!card) return;
+      const kind = card.classList.contains('comic-card')
+        ? 'comic'
+        : card.classList.contains('series-card')
+          ? 'series'
+          : card.classList.contains('publisher-card')
+            ? 'publisher'
+            : card.closest('#root-folder-list-container')
+              ? 'root-folder'
+              : 'folder';
+      cnTrack('reader-context-menu-open', { target: kind });
+    },
+    true
+  );
+
+  document.addEventListener(
+    'change',
+    (event) => {
+      if (!event.isTrusted) return;
+      const el = event.target;
+      if (!el || !el.id) return;
+      const id = el.id;
+
+      if (id === 'library-search-field') {
+        cnTrack('reader-search-field', { field: safeToken(el.value, 'all') });
+        return;
+      }
+      if (id === 'series-sort-select') {
+        cnTrack('reader-series-sort', { order: safeToken(el.value, 'default') });
+        return;
+      }
+      if (id === 'fullscreen-scrubber-slider') {
+        cnTrack('reader-scrubber-seek', {
+          comic_id: currentComicId(),
+          page: Math.max(1, Number(el.value || 1))
+        });
+        return;
+      }
+      if (id === 'reading-list-publisher-filter') {
+        cnTrack('reader-reading-list-action', {
+          action: el.value && el.value !== 'all' ? 'publisher-filter-on' : 'publisher-filter-all'
+        });
+        return;
+      }
+      if (
+        id === 'master-manga-toggle' ||
+        id === 'master-continuous-toggle' ||
+        id === 'allowed-formats-select' ||
+        id === 'cbr-conversion-originals-select' ||
+        id === 'pdf-conversion-originals-select' ||
+        id === 'log-level-filter' ||
+        id === 'log-category-filter' ||
+        id === 'guided-log-level-filter' ||
+        id === 'devices-user-select'
+      ) {
+        cnTrack('reader-settings-action', { action: id });
+        return;
+      }
+      if (
+        id.indexOf('src-cb-') === 0 ||
+        id === 'ct-gemini-enabled-toggle' ||
+        id === 'ct-gemini-model-select' ||
+        id === 'ct-storage-input' ||
+        id === 'ct-force-setting-cb'
+      ) {
+        cnTrack('reader-tagger-action', { action: id });
+      }
+    },
+    true
+  );
+
+  document.addEventListener(
+    'submit',
+    (event) => {
+      if (!event.isTrusted) return;
+      const form = event.target;
+      if (!form || !form.id) return;
+      if (form.id === 'search-form') {
+        const srcEl = document.getElementById('search-source');
+        const queryEl = document.getElementById('search-query');
+        cnTrack('reader-metadata-search', {
+          source: safeToken(srcEl ? srcEl.value : 'comicvine', 'comicvine'),
+          query_length: queryEl && queryEl.value ? queryEl.value.trim().length : 0
+        });
+        return;
+      }
+      if (form.id === 'metadata-form') {
+        cnTrack('reader-metadata-save', { comic_id: currentComicId() });
+        return;
+      }
+      if (form.id === 'settings-form' || form.id === 'guided-settings-form') {
+        cnTrack('reader-settings-save', {
+          section: form.id === 'guided-settings-form' ? 'guided-reader' : 'general'
+        });
+      }
+    },
+    true
+  );
+
+  let rlSearchTimer = null;
+  let dagSearchTimer = null;
+  document.addEventListener(
+    'input',
+    (event) => {
+      if (!event.isTrusted) return;
+      const el = event.target;
+      if (!el || !el.id) return;
+      if (el.id === 'reading-list-search') {
+        window.clearTimeout(rlSearchTimer);
+        rlSearchTimer = window.setTimeout(() => {
+          cnTrack('reader-reading-list-search', {
+            query_length: el.value ? el.value.trim().length : 0
           });
         }, 400);
         return;
       }
+      if (el.id === 'rl-dag-search') {
+        window.clearTimeout(dagSearchTimer);
+        dagSearchTimer = window.setTimeout(() => {
+          cnTrack('reader-dag-search', {
+            query_length: el.value ? el.value.trim().length : 0
+          });
+        }, 400);
+      }
+    },
+    true
+  );
 
-      if (id.indexOf('settings-tab-') === 0) {
-        cnTrack('reader-settings-tab', { tab: safeToken(id.slice('settings-tab-'.length), 'unknown') });
-        return;
-      }
-      if (id.indexOf('ct-tab-') === 0) {
-        cnTrack('reader-tagger-tab', { tab: safeToken(id.slice('ct-tab-'.length), 'unknown') });
-        return;
-      }
-      if (id === 'settings-button') {
-        cnTrack('reader-settings-open', { source: viewSource() });
-        return;
-      }
-      if (id === 'ct-button') {
-        cnTrack('reader-tagger-open', { source: viewSource() });
-        return;
-      }
-      if (id === 'reading-list-button') {
-        cnTrack('reader-reading-list-open', { source: viewSource() });
-        return;
-      }
-      if (id === 'downloads-button') {
-        cnTrack('reader-downloads-open', { source: viewSource() });
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (!event.isTrusted || event.key !== 'Enter') return;
+      const el = event.target;
+      if (!el || !el.id) return;
+      if (
+        el.id === 'page-jump-input' ||
+        el.id === 'page-jump-input-bottom' ||
+        el.id === 'fullscreen-page-jump-input'
+      ) {
+        cnTrack('reader-page-jump', {
+          control: el.id + '-submit',
+          comic_id: currentComicId(),
+          page: Math.max(1, Number(el.value || currentPageNum()))
+        });
       }
     },
     true

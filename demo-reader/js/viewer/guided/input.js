@@ -8,6 +8,19 @@ let lastTapAt = 0, lastTapX = 0, lastTapY = 0;
 function getImg() { return document.getElementById('fullscreen-image'); }
 function getStage() { return document.getElementById('fullscreen-viewer'); }
 
+function trackGuidedZoom(registry, action) {
+  if (typeof window === 'undefined' || typeof window.cnTrack !== 'function') return;
+  const comic = state.currentComic || window.currentComic;
+  const rawPage = (state.currentPageIndex !== undefined && state.currentPageIndex !== null) ? state.currentPageIndex : window.currentPageIndex;
+  const mode = registry?.getActiveModeName?.() || 'unknown';
+  window.cnTrack('reader-guided-zoom', {
+    mode: mode,
+    action: action,
+    comic_id: comic && comic.id != null ? String(comic.id).slice(0, 120) : '',
+    page: Math.max(1, Number(rawPage || 0) + 1)
+  });
+}
+
 /**
  * Delegates clicks to the active mode if applicable.
  */
@@ -63,6 +76,7 @@ export function handleImageClick(e) {
     if (typeof state.triggerEinkFlash === 'function') {
       state.triggerEinkFlash();
     }
+    trackGuidedZoom(registry, 'dismiss');
     return;
   }
 
@@ -77,6 +91,7 @@ export function handleImageClick(e) {
     if (typeof state.triggerEinkFlash === 'function') {
       state.triggerEinkFlash();
     }
+    trackGuidedZoom(registry, 'dismiss');
     return;
   }
 
@@ -130,6 +145,7 @@ export function handleImageClick(e) {
       if (typeof state.triggerEinkFlash === 'function') {
         state.triggerEinkFlash();
       }
+      trackGuidedZoom(registry, 'select');
     } else {
       // Not handled by the mode -> show menu
       e.preventDefault?.();
@@ -179,6 +195,7 @@ export function handleDoubleClickZoom(event) {
     if (typeof state.triggerEinkFlash === 'function') {
       state.triggerEinkFlash();
     }
+    trackGuidedZoom(registry, 'manual-out');
     return;
   }
 
@@ -202,6 +219,7 @@ export function handleDoubleClickZoom(event) {
   if (typeof state.triggerEinkFlash === 'function') {
     state.triggerEinkFlash();
   }
+  trackGuidedZoom(registry, 'manual-in');
 }
 
 /**
