@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Comics Now! — Self-Hosted Comic Server with Guided View, AI Panel Zoom &amp; a Visual Editor</title>
-  <meta name="description" content="Comics Now! is a self-hosted CBZ, CBR and PDF comic server. Local AI finds panels and speech bubbles so you can read on a phone without pinching and panning, with a visual editor for fixing what the AI misses.">
-  <meta name="keywords" content="self-hosted comic server, comic book reader, guided view comic reader, komga alternative, kavita alternative, ubooquity alternative, cbz cbr pdf reader, comicvine tagger, docker comic server, manga server">
+  <meta name="description" content="Comics Now! is a self-hosted CBZ, CBR, PDF and EPUB comic server. Local AI finds panels and speech bubbles so you can read on a phone without pinching and panning, with a visual editor for fixing what the AI misses.">
+  <meta name="keywords" content="self-hosted comic server, comic book reader, guided view comic reader, komga alternative, kavita alternative, ubooquity alternative, cbz cbr pdf epub reader, comicvine tagger, docker comic server, manga server">
   <link rel="canonical" href="https://comicsnow.github.io/">
   <link rel="me" href="https://github.com/ComicsNow/comics-now">
   <link rel="icon" type="image/png" href="assets/icon-192x192.png">
@@ -14,7 +14,7 @@
   <!-- Open Graph / Social Sharing -->
   <meta property="og:type" content="website">
   <meta property="og:title" content="Comics Now! — Immerse yourself in the comic">
-  <meta property="og:description" content="A self-hosted CBZ/CBR/PDF comic server with AI panel and bubble zoom, a visual guided-view editor, crossover reading maps and one-command Docker or npx setup.">
+  <meta property="og:description" content="A self-hosted CBZ/CBR/PDF/EPUB comic server with AI panel and bubble zoom, a visual guided-view editor, crossover reading maps and one-command Docker or npx setup.">
   <meta property="og:url" content="https://comicsnow.github.io/">
   <meta property="og:image" content="https://comicsnow.github.io/assets/59563.jpg">
   <meta name="twitter:card" content="summary_large_image">
@@ -65,7 +65,7 @@
           "Interactive Continuity DAG View for multi-series crossover reading lists",
           "Multi-Source Metadata Auto-Tagger (ComicVine, Metron, GCD, and more + Gemini AI Vision)",
           "60+ Tool Model Context Protocol (MCP) Server for Claude, Gemini & Cursor",
-          "Independent CBR and PDF to CBZ conversion with configurable original file retention",
+          "Native CBZ, CBR, PDF, and comic EPUB reading with optional CBZ conversion and per-format original file retention",
           "Resumable Offline PWA & E-Ink Display Modes for Monochrome and Color E-Paper"
         ]
       },
@@ -77,7 +77,7 @@
             "name": "Why not just use Komga or Kavita?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Komga and Kavita are better if you need OPDS clients, EPUB novels and a large ecosystem of third-party apps. Comics Now! is built for reading comics on a phone: local AI finds panels and speech bubbles, a visual editor fixes the misses, and a reading map shows how crossover issues connect. You can run all three and pick the reader you prefer."
+              "text": "Komga and Kavita are better if you need OPDS clients, prose EPUB novels and a large ecosystem of third-party apps. Comics Now! is built for reading comics on a phone: local AI finds panels and speech bubbles, a visual editor fixes the misses, and a reading map shows how crossover issues connect. You can run all three and pick the reader you prefer."
             }
           },
           {
@@ -90,10 +90,10 @@
           },
           {
             "@type": "Question",
-            "name": "Can Comics Now! convert CBR and PDF files to CBZ automatically?",
+            "name": "Can Comics Now! convert CBR, PDF and EPUB files to CBZ automatically?",
             "acceptedAnswer": {
               "@type": "Answer",
-              "text": "Yes. Comics Now! converts RAR/CBR and PDF comics into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format."
+              "text": "Yes. Comics Now! reads CBZ, CBR, PDF and comic EPUBs natively, and can also convert CBR, PDF and EPUB comics into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format."
             }
           }
         ]
@@ -141,7 +141,7 @@
       <div class="hero-copy">
         <a class="hero-kofi" href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener"><img src="assets/kofi-favicon.avif" alt="" width="14" height="14"> Support on Ko-fi</a>
         <h1>Immerse yourself<br>in the comic.</h1>
-        <p class="hero-deck">Komga and Kavita are great file browsers, but reading comics on a phone still means pinching and panning across tiny text. Comics Now! is a self-hosted CBZ/CBR/PDF server that uses local AI to detect panels and speech bubbles automatically&mdash;paired with a <a href="#companion">browser-based visual editor</a> when you want to tweak the reading order yourself.</p>
+        <p class="hero-deck">Komga and Kavita are great file browsers, but reading comics on a phone still means pinching and panning across tiny text. Comics Now! is a self-hosted CBZ/CBR/PDF/EPUB server that uses local AI to detect panels and speech bubbles automatically&mdash;paired with a <a href="#companion">browser-based visual editor</a> when you want to tweak the reading order yourself.</p>
         <div class="hero-actions">
           <a href="demo-reader/index.html?mode=manga-reader" class="btn btn--red btn--large" data-umami-event="hero-launch-reader-demo">Click here for Live App Demo</a>
           <a href="demo-gve/index.html" class="btn btn--large" data-umami-event="hero-launch-gve-demo">Click here for Live Panel Editor App</a>
@@ -449,8 +449,8 @@
               <svg viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6V2Z"/><path d="M14 2v5h5M9 14h6M12 11v6"/></svg>
             </span>
             <div>
-              <h3>CBR and PDF, handled</h3>
-              <p>Convert to streamable CBZ once. Keep or delete the originals, with separate rules for CBR and PDF.</p>
+              <h3>CBR, PDF and EPUB, handled</h3>
+              <p>Read natively or convert to streamable CBZ. Keep or delete the originals, with separate rules for CBR, PDF and EPUB.</p>
             </div>
           </li>
           <li>
@@ -533,7 +533,7 @@
               </tr>
               <tr class="row-gap">
                 <th scope="row">OPDS and EPUB support</th>
-                <td class="is-us"><span class="no">Not yet</span></td>
+                <td class="is-us"><span class="yes">Comic EPUB</span><span class="cell-note">OPDS not yet</span></td>
                 <td><span class="yes">OPDS and EPUB</span></td>
                 <td><span class="yes">OPDS and EPUB</span></td>
                 <td><span class="yes">OPDS and EPUB</span></td>
@@ -550,7 +550,7 @@
           </div>
         </div>
 
-        <p class="table-note">If OPDS clients and EPUB novels are must-haves today, Komga and Kavita are the better tools for that job. Comics Now! is built around the reading view, the editor and AI-assisted cataloguing.</p>
+        <p class="table-note">If OPDS clients and prose EPUB novels are must-haves today, Komga and Kavita are the better tools for that job. Comics Now! is built around the reading view, the editor and AI-assisted cataloguing.</p>
       </div>
     </section>
 
@@ -565,15 +565,15 @@
         <div class="faq-list">
           <details class="faq-item" open>
             <summary>Why not just use Komga or Kavita?</summary>
-            <p>They are better if you need OPDS clients, EPUB novels and a large ecosystem of third-party apps. Comics Now! is built for reading comics on a phone: local AI finds panels and speech bubbles, a visual editor fixes the misses, and a reading map shows how crossover issues connect. You can run all three and pick the reader you prefer.</p>
+            <p>They are better if you need OPDS clients, prose EPUB novels and a large ecosystem of third-party apps. Comics Now! is built for reading comics on a phone: local AI finds panels and speech bubbles, a visual editor fixes the misses, and a reading map shows how crossover issues connect. You can run all three and pick the reader you prefer.</p>
           </details>
           <details class="faq-item">
             <summary>Do I need a GPU for panel detection?</summary>
             <p>No. The detectors run locally on your CPU or GPU, and pages can also go to Modal serverless GPUs so a large import does not slow down your home server.</p>
           </details>
           <details class="faq-item">
-            <summary>How does CBR and PDF conversion work?</summary>
-            <p>Comics Now! converts RAR/CBR and PDF files into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format.</p>
+            <summary>How does CBR, PDF and EPUB conversion work?</summary>
+            <p>Comics Now! reads CBZ, CBR, PDF and comic EPUBs natively, and can also convert CBR, PDF and EPUB files into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format.</p>
           </details>
           <details class="faq-item">
             <summary>Is it really free?</summary>
