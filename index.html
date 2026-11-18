@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comics Now! — Self-Hosted Comic Server with Guided View, AI Panel Zoom &amp; a Visual Editor</title>
-  <meta name="description" content="Comics Now! is a self-hosted CBZ, CBR, PDF and EPUB comic server. Local AI finds panels and speech bubbles so you can read on a phone without pinching and panning, with a visual editor for fixing what the AI misses.">
-  <meta name="keywords" content="self-hosted comic server, comic book reader, guided view comic reader, komga alternative, kavita alternative, ubooquity alternative, cbz cbr pdf epub reader, comicvine tagger, docker comic server, manga server">
+  <title>Comics Now! — Self-Hosted Comic Server &amp; AI CBZ/CBR Reader</title>
+  <meta name="description" content="Comics Now! is a self-hosted CBZ, CBR, PDF and EPUB comic reader &amp; server. Local AI detects panels and speech bubbles for phone reading, with a visual editor for fixing what the AI misses.">
+  <meta name="keywords" content="self-hosted comic server, comic book reader, cbz cbr reader, guided view comic reader, komga alternative, kavita alternative, ubooquity alternative, cbz format reader, docker comic server, manga server">
+  <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://comicsnow.github.io/">
   <link rel="me" href="https://github.com/ComicsNow/comics-now">
   <link rel="icon" type="image/png" href="assets/icon-192x192.png">
@@ -13,13 +14,17 @@
 
   <!-- Open Graph / Social Sharing -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Comics Now! — Immerse yourself in the comic">
+  <meta property="og:site_name" content="Comics Now!">
+  <meta property="og:title" content="Comics Now! — Self-Hosted Comic Server &amp; AI CBZ/CBR Reader">
   <meta property="og:description" content="A self-hosted CBZ/CBR/PDF/EPUB comic server with AI panel and bubble zoom, a visual guided-view editor, crossover reading maps and one-command Docker or npx setup.">
   <meta property="og:url" content="https://comicsnow.github.io/">
   <meta property="og:image" content="https://comicsnow.github.io/assets/59563.jpg">
+  <meta property="og:image:alt" content="Comics Now! self-hosted comic server and AI Guided View reader">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Comics Now! — Immerse yourself in the comic">
-  <meta name="twitter:description" content="Self-hosted comics with AI-guided panel and bubble zoom. Test the real reader in your browser.">
+  <meta name="twitter:title" content="Comics Now! — Self-Hosted Comic Server &amp; AI CBZ/CBR Reader">
+  <meta name="twitter:description" content="Self-hosted CBZ/CBR/PDF/EPUB comics with AI-guided panel and bubble zoom. Test the real reader in your browser.">
+  <meta name="twitter:image" content="https://comicsnow.github.io/assets/59563.jpg">
+  <meta name="twitter:image:alt" content="Comics Now! self-hosted comic server and AI Guided View reader">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -95,6 +100,14 @@
               "@type": "Answer",
               "text": "Yes. Comics Now! reads CBZ, CBR, PDF and comic EPUBs natively, and can also convert CBR, PDF and EPUB comics into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format."
             }
+          },
+          {
+            "@type": "Question",
+            "name": "Is Comics Now! really free?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. The server and the editor are AGPL-3.0, with no account and no paid tier. You bring the hardware, the comics and, if you want cloud tagging or detection, your own API keys."
+            }
           }
         ]
       }
@@ -143,8 +156,8 @@
         <h1>Immerse yourself<br>in the comic.</h1>
         <p class="hero-deck">Komga and Kavita are great file browsers, but reading comics on a phone still means pinching and panning across tiny text. Comics Now! is a self-hosted CBZ/CBR/PDF/EPUB server that uses local AI to detect panels and speech bubbles automatically&mdash;paired with a <a href="#companion">browser-based visual editor</a> when you want to tweak the reading order yourself.</p>
         <div class="hero-actions">
-          <a href="demo-reader/index.html?mode=manga-reader" class="btn btn--red btn--large" data-umami-event="hero-launch-reader-demo">Click here for Live App Demo</a>
-          <a href="demo-gve/index.html" class="btn btn--large" data-umami-event="hero-launch-gve-demo">Click here for Live Panel Editor App</a>
+          <a href="demo-reader/index.html?mode=manga-reader" class="btn btn--red btn--large" data-umami-event="hero-launch-reader-demo">Try Live Comic Reader Demo</a>
+          <a href="demo-gve/index.html" class="btn btn--large" data-umami-event="hero-launch-gve-demo">Try Live Panel Editor</a>
         </div>
         <p class="hero-note">Public-domain and open-licensed pages, loaded locally. No account and no upload. The GVE editor is designed for a desktop browser.</p>
       </div>
@@ -235,7 +248,7 @@
                 </figcaption>
               </figure>
               <div class="zoom-cta">
-                <a href="demo-reader/index.html?mode=manga-panel-zoom" class="btn btn--small btn--red" data-umami-event="demo-launch-manga-panel-zoom">Click here for live demo</a>
+                <a href="demo-reader/index.html?mode=manga-panel-zoom" class="btn btn--small btn--red" data-umami-event="demo-launch-manga-panel-zoom">Open panel zoom demo</a>
               </div>
               <p class="visually-hidden" id="panel-zoom-help">Tap or click any panel to open a close-up over the page. Tap the close-up again to return. With a keyboard, tab to a panel and press Enter; press Escape to return.</p>
             </article>
@@ -262,7 +275,7 @@
                 </figcaption>
               </figure>
               <div class="zoom-cta">
-                <a href="demo-reader/index.html?mode=western-bubble-zoom" class="btn btn--small btn--red" data-umami-event="demo-launch-western-bubble-zoom">Click here for live demo</a>
+                <a href="demo-reader/index.html?mode=western-bubble-zoom" class="btn btn--small btn--red" data-umami-event="demo-launch-western-bubble-zoom">Open bubble zoom demo</a>
               </div>
               <p class="visually-hidden" id="bubble-zoom-help">Tap or click any speech bubble to open a close-up over the page. Tap the close-up again to return. With a keyboard, tab to a bubble and press Enter; press Escape to return.</p>
             </article>
@@ -273,42 +286,42 @@
             <ul class="contents">
               <li>
                 <a href="demo-reader/index.html?mode=manga-reader" data-umami-event="demo-launch-manga-reader">
-                  <span class="contents-name">Click here for Reader view</span>
+                  <span class="contents-name">Comic reader view</span>
                   <span class="contents-sub">Give My Regards to Black Jack #001</span>
                   <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 </a>
               </li>
               <li>
                 <a href="demo-reader/index.html?mode=manga-panel-zoom" data-umami-event="demo-launch-manga-panel-zoom">
-                  <span class="contents-name">Click here for Manga panel zoom</span>
+                  <span class="contents-name">Manga panel zoom</span>
                   <span class="contents-sub">Page 7, right to left</span>
                   <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 </a>
               </li>
               <li>
                 <a href="demo-reader/index.html?mode=western-bubble-zoom" data-umami-event="demo-launch-western-bubble-zoom">
-                  <span class="contents-name">Click here for Western bubble zoom</span>
+                  <span class="contents-name">Western bubble zoom</span>
                   <span class="contents-sub">Zip Comics #001 (1940)</span>
                   <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 </a>
               </li>
               <li>
                 <a href="demo-reader/index.html?mode=library-grid" data-umami-event="demo-launch-library-grid">
-                  <span class="contents-name">Click here for Library grid</span>
+                  <span class="contents-name">Comic library grid</span>
                   <span class="contents-sub">Publishers, series, issues</span>
                   <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 </a>
               </li>
               <li>
                 <a href="demo-reader/index.html?mode=reading-list-dag" data-umami-event="demo-launch-crossover-map">
-                  <span class="contents-name">Click here for Crossover map</span>
+                  <span class="contents-name">Crossover reading map</span>
                   <span class="contents-sub">Six issues, three publishers</span>
                   <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 </a>
               </li>
               <li>
                 <a href="demo-gve/index.html" data-umami-event="demo-launch-gve-editor">
-                  <span class="contents-name">Click here for GVE Now!</span>
+                  <span class="contents-name">GVE Now! panel editor</span>
                   <span class="contents-sub">Draw and save your own boxes. Desktop browser.</span>
                   <svg class="contents-arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
                 </a>
@@ -392,8 +405,8 @@
         </div>
 
         <div class="companion-actions">
-          <a class="btn btn--red" href="demo-gve/index.html" data-umami-event="companion-open-gve">Click here to open the editor</a>
-          <a class="btn" href="demo-reader/index.html?mode=manga-panel-zoom" data-umami-event="companion-see-reader">Click here to see it in the reader</a>
+          <a class="btn btn--red" href="demo-gve/index.html" data-umami-event="companion-open-gve">Open GVE Now! editor</a>
+          <a class="btn" href="demo-reader/index.html?mode=manga-panel-zoom" data-umami-event="companion-see-reader">See it in the comic reader</a>
         </div>
         <p class="companion-note">GVE Now! is designed for a desktop browser. The reader is the phone-first half.</p>
       </div>
