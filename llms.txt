@@ -1,0 +1,22 @@
+# Comics Now!
+
+> Comics Now! is an open-source, self-hosted smart comic book reader app and server for CBZ, CBR, PDF, and EPUB comics with AI-powered panel and speech bubble zoom.
+
+## Core Pages & Demos
+- [Home & Documentation](https://comicsnow.github.io/): Official landing page, self-hosted deployment guides, comparison against Komga and Kavita, and FAQ.
+- [Live Comic Reader Demo](https://comicsnow.github.io/demo-reader/): Interactive in-browser smart comic reader with AI panel zoom, speech bubble zoom, library browsing, and crossover reading maps.
+- [Live Panel Editor (GVE Now!)](https://comicsnow.github.io/demo-gve/): Browser-based visual editor for authoring and fine-tuning Guided View panel and speech bubble bounding boxes.
+
+## Key Capabilities
+- **Format Support**: Native reading for CBZ, CBR, PDF, and comic EPUB files, plus automated conversion to streamable CBZ archives with page integrity verification.
+- **Smart Reader & AI Guided View**: Embedded on-device ONNX vision models detect comic panels and dialogue bubbles for comfortable phone and tablet reading without manual pinching or panning.
+- **Crossover Continuity Maps**: Interactive DAG graph visualization for chronological reading orders across multi-series Marvel Comics, DC Comics, and indie comic events.
+- **Automatic Metadata Tagging**: Multi-source scraping and identification via ComicVine, Metron, Grand Comics Database (GCD), and Gemini AI visual cover matching.
+- **Model Context Protocol (MCP)**: Built-in 60+ tool MCP server enabling AI agents (Claude, Gemini, Cursor) to organize, tag, and query comic libraries.
+- **Offline PWA & E-Ink**: Resumable offline caching for mobile and tablets, with dedicated high-contrast monochrome and color modes for E-Ink ereaders (Boox, Kobo, PocketBook).
+
+## Open Source Repositories
+- [GitHub - Comics Now!](https://github.com/ComicsNow/comics-now): Main application repository (AGPL-3.0).
+- [GitHub - GVE Now!](https://github.com/ComicsNow/gve-now-editor): Companion Guided View visual editor (AGPL-3.0).
+- [npm Package](https://www.npmjs.com/package/comics-now): Official npm package.
+- [Docker Hub](https://hub.docker.com/r/comicsnowdev/comics-now): Prebuilt container images.
