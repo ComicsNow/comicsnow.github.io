@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Comics Now! — Self-Hosted Comic Server &amp; AI CBZ/CBR Reader</title>
-  <meta name="description" content="Comics Now! is a self-hosted CBZ, CBR, PDF and EPUB comic reader &amp; server. Local AI detects panels and speech bubbles for phone reading, with a visual editor for fixing what the AI misses.">
-  <meta name="keywords" content="self-hosted comic server, comic book reader, cbz cbr reader, guided view comic reader, komga alternative, kavita alternative, ubooquity alternative, cbz format reader, docker comic server, manga server">
+  <title>Comics Now! — Smart Comic Book Reader App to Read Comics</title>
+  <meta name="description" content="Looking for a smart app to read comics? Comics Now! reads CBZ, CBR, PDF, and EPUB comics with AI panel zoom for Marvel, DC Comics, indie titles, and manga.">
+  <meta name="keywords" content="comics, comics app, comic book reader, comic book app, app to read comics, smart comic reader, read comics, pdf comic reader, epub comic reader, indie comics, DC comics, marvel comics, self-hosted comic server, cbz reader, cbr reader, manga reader app, digital comic library">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://comicsnow.github.io/">
   <link rel="me" href="https://github.com/ComicsNow/comics-now">
@@ -15,16 +15,16 @@
   <!-- Open Graph / Social Sharing -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Comics Now!">
-  <meta property="og:title" content="Comics Now! — Self-Hosted Comic Server &amp; AI CBZ/CBR Reader">
-  <meta property="og:description" content="A self-hosted CBZ/CBR/PDF/EPUB comic server with AI panel and bubble zoom, a visual guided-view editor, crossover reading maps and one-command Docker or npx setup.">
+  <meta property="og:title" content="Comics Now! — Smart Comic Book Reader App to Read Comics">
+  <meta property="og:description" content="Looking for a smart app to read comics? Comics Now! reads CBZ, CBR, PDF, and EPUB comics with AI panel zoom for Marvel, DC Comics, indie titles, and manga.">
   <meta property="og:url" content="https://comicsnow.github.io/">
   <meta property="og:image" content="https://comicsnow.github.io/assets/59563.jpg">
-  <meta property="og:image:alt" content="Comics Now! self-hosted comic server and AI Guided View reader">
+  <meta property="og:image:alt" content="Comics Now! smart comic book reader app and AI reader">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Comics Now! — Self-Hosted Comic Server &amp; AI CBZ/CBR Reader">
-  <meta name="twitter:description" content="Self-hosted CBZ/CBR/PDF/EPUB comics with AI-guided panel and bubble zoom. Test the real reader in your browser.">
+  <meta name="twitter:title" content="Comics Now! — Smart Comic Book Reader App to Read Comics">
+  <meta name="twitter:description" content="Looking for a smart app to read comics? Comics Now! reads CBZ, CBR, PDF, and EPUB comics with AI panel zoom for Marvel, DC Comics, indie titles, and manga.">
   <meta name="twitter:image" content="https://comicsnow.github.io/assets/59563.jpg">
-  <meta name="twitter:image:alt" content="Comics Now! self-hosted comic server and AI Guided View reader">
+  <meta name="twitter:image:alt" content="Comics Now! smart comic book reader app and AI reader">
 
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="styles.css?v=30">
 
   <!-- Privacy-Friendly Analytics by Umami Cloud (Zero Cookies, GDPR Compliant) -->
-  <script defer src="https://cloud.umami.is/script.js" data-website-id="7cdddfcb-5f98-44b3-a9ef-617b05efc4dd" data-auto-track="true" data-domains="comicsnow.github.io" data-performance="true" data-errors="true" data-release="5.0.1" data-exclude-hash="true"></script>
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="7cdddfcb-5f98-44b3-a9ef-617b05efc4dd" data-auto-track="true" data-domains="comicsnow.github.io" data-performance="true" data-errors="true" data-release="5.1.0" data-exclude-hash="true"></script>
 
   <!-- JSON-LD Structured Data for Google Rich Snippets -->
   <script type="application/ld+json">
@@ -45,9 +45,11 @@
         "@type": "SoftwareApplication",
         "name": "Comics Now!",
         "applicationCategory": "MultimediaApplication",
-        "applicationSubCategory": "Self-Hosted Comic Book & Manga Server",
+        "applicationSubCategory": "Comic Book Reader & Self-Hosted Comics App",
         "operatingSystem": "Linux, Docker, Windows, macOS, iOS, Android, E-Ink",
-        "softwareVersion": "5.0.1",
+        "softwareVersion": "5.1.0",
+        "description": "Self-hosted comic book app and smart reader for CBZ, CBR, PDF, and EPUB comics, featuring AI panel zoom for Marvel Comics, DC Comics, indie comics, and manga.",
+        "keywords": "comics, comics app, comic book reader, comic book app, app to read comics, smart comic reader, read comics, pdf comic reader, epub comic reader, indie comics, DC comics, marvel comics, manga, self-hosted comic server, cbz, cbr, pdf, epub",
         "license": "https://www.gnu.org/licenses/agpl-3.0.html",
         "url": "https://comicsnow.github.io/",
         "downloadUrl": "https://github.com/ComicsNow/comics-now/releases/latest",
@@ -67,8 +69,8 @@
         "featureList": [
           "AI Panel & Speech Bubble Zoom (Guided View via ONNX & Modal Cloud GPU)",
           "GVE Now! Companion Visual Guided-View Editor with shared WebP cache & live sidecar authoring",
-          "Interactive Continuity DAG View for multi-series crossover reading lists",
-          "Multi-Source Metadata Auto-Tagger (ComicVine, Metron, GCD, and more + Gemini AI Vision)",
+          "Interactive Continuity DAG View for Marvel, DC, and indie comic crossover reading lists",
+          "Multi-Source Metadata Auto-Tagger (ComicVine, Metron, GCD, and Gemini AI Vision)",
           "60+ Tool Model Context Protocol (MCP) Server for Claude, Gemini & Cursor",
           "Native CBZ, CBR, PDF, and comic EPUB reading with optional CBZ conversion and per-format original file retention",
           "Resumable Offline PWA & E-Ink Display Modes for Monochrome and Color E-Paper"
@@ -77,6 +79,22 @@
       {
         "@type": "FAQPage",
         "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "What is the best app to read comics on phone and tablet?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Comics Now! is built specifically for reading comics comfortably on phones, tablets, and mobile devices. Unlike standard image viewers that require constant pinching and manual panning, Comics Now! uses local AI to detect individual panels and speech bubbles so you can read full comic pages with cinematic tap-to-zoom Guided View."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What makes Comics Now! a smart reader for comic books?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Comics Now! features on-device artificial intelligence (computer vision ONNX models) that automatically detect panel boundaries, dialogue balloons, and reading flow across Western comics and right-to-left manga. It is also paired with GVE Now!, an interactive visual editor that lets you adjust panel boxes directly in your browser."
+            }
+          },
           {
             "@type": "Question",
             "name": "Why not just use Komga or Kavita?",
@@ -99,6 +117,22 @@
             "acceptedAnswer": {
               "@type": "Answer",
               "text": "Yes. Comics Now! reads CBZ, CBR, PDF and comic EPUBs natively, and can also convert CBR, PDF and EPUB comics into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "How does Comics Now! handle Marvel, DC, and indie comic crossover reading orders?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Comics Now! uses an interactive directed acyclic graph (DAG) continuity map. Instead of flat reading lists, you can visualize and follow multi-issue crossover storylines across Marvel, DC Comics, and indie publishers so you always know the chronological reading order across different series."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I use Comics Now! as an offline comic book app on mobile and tablets?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Comics Now! installs as a Progressive Web App (PWA) with resumable offline caching. You can download issues directly to your phone, iPad, Android tablet, or E-Ink device to read comics anywhere without an internet connection."
             }
           },
           {
@@ -142,7 +176,7 @@
 
   <div class="cover-strip" aria-label="Release information">
     <div class="wrap cover-strip-inner">
-      <span>No. 5.0.1</span>
+      <span>No. 5.1.0</span>
       <span>November 2026</span>
       <span>Free under AGPL-3.0</span>
     </div>
@@ -153,8 +187,8 @@
     <section id="top" class="hero wrap">
       <div class="hero-copy">
         <a class="hero-kofi" href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener"><img src="assets/kofi-favicon.avif" alt="" width="14" height="14"> Support on Ko-fi</a>
-        <h1>Immerse yourself<br>in the comic.</h1>
-        <p class="hero-deck">Komga and Kavita are great file browsers, but reading comics on a phone still means pinching and panning across tiny text. Comics Now! is a self-hosted CBZ/CBR/PDF/EPUB server that uses local AI to detect panels and speech bubbles automatically&mdash;paired with a <a href="#companion">browser-based visual editor</a> when you want to tweak the reading order yourself.</p>
+        <h1>The smart reader app<br>to read comic books.</h1>
+        <p class="hero-deck">Tired of pinching and squinting across tiny dialogue on your phone? Comics Now! is a smart comic book reader app designed for people who love comics. Whether you read CBZ, CBR, PDF, or comic EPUB files&mdash;from massive Marvel and DC Comics crossover events to indie graphic novels and manga&mdash;local AI detects panels and speech bubbles automatically, giving you a cinematic Guided View on any screen, paired with a <a href="#companion">browser-based visual editor</a> when you want to tweak the reading order yourself.</p>
         <div class="hero-actions">
           <a href="demo-reader/index.html?mode=manga-reader" class="btn btn--red btn--large" data-umami-event="hero-launch-reader-demo">Try Live Comic Reader Demo</a>
           <a href="demo-gve/index.html" class="btn btn--large" data-umami-event="hero-launch-gve-demo">Try Live Panel Editor</a>
@@ -174,7 +208,7 @@
             <svg class="phone-icon is-on" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
             <svg class="phone-icon" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           </div>
-          <img src="assets/design/bj-panel-zoom.jpg" alt="" width="800" height="1146">
+          <img src="assets/design/bj-panel-zoom.jpg" alt="Comics Now! comic book app running AI panel zoom on a mobile phone" width="800" height="1146">
           <div class="phone-foot">Page 7 / 16</div>
         </div>
         <figcaption class="art-caption">A right-to-left manga page in the reader. Tap the panel for a closer look.</figcaption>
@@ -426,8 +460,8 @@
               <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 3v3M3 8h3M16 21v-3M21 16h-3"/></svg>
             </span>
             <div>
-              <h3>Panel and bubble zoom</h3>
-              <p>Local ONNX models find the boxes on every page. Tap one and it fills the screen, in right-to-left manga or western comics.</p>
+              <h3>Smart panel and bubble zoom</h3>
+              <p>A true smart reader with on-device AI. Local ONNX models detect comic panels and dialogue bubbles in milliseconds, giving you tap-to-zoom Guided View on any phone or tablet.</p>
             </div>
           </li>
           <li>
@@ -435,8 +469,8 @@
               <svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="12" r="2.5"/><circle cx="8" cy="19" r="2.5"/><path d="M7.3 7.2 16.7 11M6 8.4 7.4 16.6M10.5 18.2 16.6 13.4"/></svg>
             </span>
             <div>
-              <h3>Crossover reading maps</h3>
-              <p>See how a tie-in connects across series and publishers, and which issue to open next.</p>
+              <h3>Marvel, DC & indie crossover reading maps</h3>
+              <p>Follow sprawling Marvel, DC Comics, and indie comic storylines. See how tie-ins connect across series and publishers, and know which issue to read next.</p>
             </div>
           </li>
           <li>
@@ -445,7 +479,7 @@
             </span>
             <div>
               <h3>Metadata that fills itself in</h3>
-              <p>ComicVine, Metron and the Grand Comics Database, with Gemini cover matching when the filenames are wrong.</p>
+              <p>ComicVine, Metron and the Grand Comics Database automatically identify Marvel Comics, DC Comics, and indie comic publishers, with Gemini AI cover matching when filenames are messy.</p>
             </div>
           </li>
           <li>
@@ -462,8 +496,8 @@
               <svg viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6V2Z"/><path d="M14 2v5h5M9 14h6M12 11v6"/></svg>
             </span>
             <div>
-              <h3>CBR, PDF and EPUB, handled</h3>
-              <p>Read natively or convert to streamable CBZ. Keep or delete the originals, with separate rules for CBR, PDF and EPUB.</p>
+              <h3>Read CBZ, CBR, PDF, and EPUB comics</h3>
+              <p>Read your favorite comics natively or convert them into streamable CBZ archives with automatic page integrity checks.</p>
             </div>
           </li>
           <li>
@@ -471,8 +505,8 @@
               <svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M9 6h6M9 18h6"/><circle cx="12" cy="12" r="2.5"/></svg>
             </span>
             <div>
-              <h3>Offline and E-Ink</h3>
-              <p>Resumable downloads for tablets, plus monochrome and color display modes for Boox, Kobo and PocketBook.</p>
+              <h3>Offline comic book app for mobile & E-Ink</h3>
+              <p>Install as a fast offline app to read comics on iPhone, Android, iPad, or E-Ink devices (Boox, Kobo, PocketBook) with resumable background downloads.</p>
             </div>
           </li>
         </ul>
@@ -488,7 +522,7 @@
         </div>
 
         <div class="table-frame">
-          <p class="table-caption" id="comparison-caption">Feature comparison between Comics Now!, Komga, Kavita and Ubooquity, as of v5.0.1.</p>
+          <p class="table-caption" id="comparison-caption">Feature comparison between Comics Now!, Komga, Kavita and Ubooquity, as of v5.1.0.</p>
           <p class="table-hint" id="comparison-hint">Swipe sideways to compare all four readers <span aria-hidden="true">&rarr;</span></p>
           <div class="table-wrap" tabindex="0" role="region" aria-labelledby="comparison-caption" aria-describedby="comparison-hint">
             <table class="compare" aria-labelledby="comparison-caption">
@@ -577,6 +611,14 @@
         </div>
         <div class="faq-list">
           <details class="faq-item" open>
+            <summary>What is the best app to read comics on phone and tablet?</summary>
+            <p>Comics Now! is built specifically for reading comics comfortably on phones, tablets, and mobile devices. Unlike standard image viewers that require constant pinching and manual panning, Comics Now! uses local AI to detect individual panels and speech bubbles so you can read full comic pages with cinematic tap-to-zoom Guided View.</p>
+          </details>
+          <details class="faq-item">
+            <summary>What makes Comics Now! a smart reader for comic books?</summary>
+            <p>Comics Now! features on-device artificial intelligence (computer vision ONNX models) that automatically detect panel boundaries, dialogue balloons, and reading flow across Western comics and right-to-left manga. It is also paired with GVE Now!, an interactive visual editor that lets you adjust panel boxes directly in your browser.</p>
+          </details>
+          <details class="faq-item">
             <summary>Why not just use Komga or Kavita?</summary>
             <p>They are better if you need OPDS clients, prose EPUB novels and a large ecosystem of third-party apps. Comics Now! is built for reading comics on a phone: local AI finds panels and speech bubbles, a visual editor fixes the misses, and a reading map shows how crossover issues connect. You can run all three and pick the reader you prefer.</p>
           </details>
@@ -587,6 +629,14 @@
           <details class="faq-item">
             <summary>How does CBR, PDF and EPUB conversion work?</summary>
             <p>Comics Now! reads CBZ, CBR, PDF and comic EPUBs natively, and can also convert CBR, PDF and EPUB files into streamable CBZ archives with page integrity checks. You can keep or delete the originals, with separate rules for each format.</p>
+          </details>
+          <details class="faq-item">
+            <summary>How does Comics Now! handle Marvel, DC, and indie comic crossover reading orders?</summary>
+            <p>Comics Now! uses an interactive directed acyclic graph (DAG) continuity map. Instead of flat reading lists, you can visualize and follow multi-issue crossover storylines across Marvel, DC Comics, and indie publishers so you always know the chronological reading order across different series.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Can I use Comics Now! as an offline comic book app on mobile and tablets?</summary>
+            <p>Yes. Comics Now! installs as a Progressive Web App (PWA) with resumable offline caching. You can download issues directly to your phone, iPad, Android tablet, or E-Ink device to read comics anywhere without an internet connection.</p>
           </details>
           <details class="faq-item">
             <summary>Is it really free?</summary>
@@ -601,7 +651,7 @@
     <div class="wrap footer-inner">
       <p class="kofi-line"><a href="https://ko-fi.com/comicsnow" target="_blank" rel="noopener" class="kofi-link"><img src="assets/kofi-favicon.avif" alt="" width="16" height="16" loading="lazy"> Support on Ko-fi</a></p>
       <div class="indicia">
-        <p class="indicia-line"><span class="indicia-brand">COMICS NOW!</span> No. 5.0.1. Self-hosted comic server, published under the AGPL-3.0 license.</p>
+        <p class="indicia-line"><span class="indicia-brand">COMICS NOW!</span> No. 5.1.0. Self-hosted comic server, published under the AGPL-3.0 license.</p>
         <p class="indicia-links">
           <a href="https://github.com/ComicsNow/comics-now" target="_blank" rel="noopener">GitHub</a>
           <a href="https://www.npmjs.com/package/comics-now" target="_blank" rel="noopener">npm</a>
